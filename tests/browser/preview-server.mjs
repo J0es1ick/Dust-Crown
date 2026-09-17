@@ -4,6 +4,7 @@ import { resolve, extname, sep } from "node:path";
 
 // A single process avoids Vite/npm child-process teardown hanging on Windows.
 const root = resolve("dist");
+const basePath = "/Dust-Crown/";
 const types = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -15,11 +16,12 @@ const types = {
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://localhost");
-    if (!url.pathname.startsWith("/Game/")) {
+    if (!url.pathname.startsWith(basePath)) {
       response.writeHead(404).end();
       return;
     }
-    const relative = decodeURIComponent(url.pathname.slice(6)) || "index.html";
+    const relative =
+      decodeURIComponent(url.pathname.slice(basePath.length)) || "index.html";
     const file = resolve(root, relative);
     if (!file.startsWith(root + sep)) {
       response.writeHead(403).end();

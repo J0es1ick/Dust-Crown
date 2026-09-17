@@ -20,7 +20,7 @@ export default defineConfig({
     ["json", { outputFile: resolve("test-results/report.json") }],
   ],
   use: {
-    baseURL: `http://127.0.0.1:${port}/Game/`,
+    baseURL: `http://127.0.0.1:${port}/Dust-Crown/`,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
