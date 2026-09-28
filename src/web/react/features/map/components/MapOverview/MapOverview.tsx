@@ -2,12 +2,14 @@ import { useMemo } from "react";
 import {
   ARENAS,
   CLASS_DEFINITIONS,
+  DUEL_TIERS,
 } from "../../../../../../catalogs/WorldCatalog";
 import {
   combatantSnapshot,
   nextSkills,
 } from "../../../../../../gameplay/combat/AdvancedBattle";
 import { useGame } from "../../../../app/state/GameContext";
+import { useBeginBattle } from "../../../../app/state/useBeginBattle";
 import { StatRow, css } from "../../../../shared/ui/common";
 import { classIcons } from "../../../../shared/utils/gameLabels";
 
@@ -57,6 +59,7 @@ export function HeroSummaryCard() {
 
 export function NextGoalCard() {
   const { game, navigate, openDialog } = useGame();
+  const begin = useBeginBattle();
   const hero = game.save.hero;
   const next = nextSkills(hero.classId, hero.level)[0];
   const arena = ARENAS[hero.highestArena];
@@ -72,11 +75,29 @@ export function NextGoalCard() {
     (entry) => game.registeredTournamentDay(entry.id) === game.save.worldDay,
   );
   const crownDue = game.registeredCrownLeagueDay() === game.save.worldDay;
+  const firstDuel =
+    hero.wins === 0 &&
+    hero.losses === 0 &&
+    hero.highestArena === 0 &&
+    !dueArena &&
+    !crownDue &&
+    !game.save.pendingEliteChallengeId &&
+    !game.save.activeExpedition &&
+    !game.save.pendingBattle &&
+    game.availability(DUEL_TIERS[0]).unlocked;
   let title = arena.name;
   let detail = availability.reason;
   let action = registeredDay ? "К записи на турнир" : "К турнирам";
   let onAction = () => navigate("map", "tournaments-section");
   let urgent = false;
+
+  if (firstDuel) {
+    title = "Первый бой";
+    detail =
+      "Знакомство с ареной: дуэль без риска гибели. Один игровой день, опыт и награда за победу. Перед началом вы увидите соперника.";
+    action = "Первая дуэль";
+    onAction = () => begin((current) => current.beginDuel(DUEL_TIERS[0].id));
+  }
 
   if (finalArenaWon) {
     title = epoch.unlocked
@@ -130,7 +151,7 @@ export function NextGoalCard() {
 
   return (
     <section
-      className={`next-goal map-priority${urgent ? " goal-urgent" : ""}`}
+      className={`next-goal map-priority${urgent ? " goal-urgent" : ""}${firstDuel ? " first-duel-goal" : ""}`}
       id="next-goal"
       aria-label="Ближайшая цель"
     >
@@ -143,43 +164,45 @@ export function NextGoalCard() {
         <h2>{title}</h2>
         <p>{detail}</p>
       </div>
-      <div className="next-goal-progress">
-        <div>
-          <span>
-            {finalArenaWon
-              ? "Условия перехода эпохи"
-              : "Чемпионства на этой арене"}
-          </span>
-          <strong>
-            {current} из {target}
-          </strong>
+      {!firstDuel && (
+        <div className="next-goal-progress">
+          <div>
+            <span>
+              {finalArenaWon
+                ? "Условия перехода эпохи"
+                : "Чемпионства на этой арене"}
+            </span>
+            <strong>
+              {current} из {target}
+            </strong>
+          </div>
+          <div
+            className="goal-progress-line"
+            role="progressbar"
+            aria-label={
+              finalArenaWon
+                ? "Условия перехода эпохи"
+                : "Чемпионства на этой арене"
+            }
+            aria-valuemin={0}
+            aria-valuemax={target}
+            aria-valuenow={current}
+          >
+            <i style={{ width: `${progress}%` }} />
+          </div>
+          {next && (
+            <small>
+              На {next.unlockLevel} уровне откроется «{next.name}»
+            </small>
+          )}
+          {!urgent && registeredDay && registeredDay > game.save.worldDay && (
+            <small>
+              Запись: день {registeredDay} · осталось{" "}
+              {registeredDay - game.save.worldDay} дн.
+            </small>
+          )}
         </div>
-        <div
-          className="goal-progress-line"
-          role="progressbar"
-          aria-label={
-            finalArenaWon
-              ? "Условия перехода эпохи"
-              : "Чемпионства на этой арене"
-          }
-          aria-valuemin={0}
-          aria-valuemax={target}
-          aria-valuenow={current}
-        >
-          <i style={{ width: `${progress}%` }} />
-        </div>
-        {next && (
-          <small>
-            На {next.unlockLevel} уровне откроется «{next.name}»
-          </small>
-        )}
-        {!urgent && registeredDay && registeredDay > game.save.worldDay && (
-          <small>
-            Запись: день {registeredDay} · осталось{" "}
-            {registeredDay - game.save.worldDay} дн.
-          </small>
-        )}
-      </div>
+      )}
       <button
         className="button primary next-goal-action"
         type="button"

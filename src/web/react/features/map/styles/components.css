@@ -57,3 +57,13 @@
 .next-goal.goal-urgent .eyebrow {
   color: var(--muted);
 }
+
+.next-goal.first-duel-goal {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 820px) {
+  .next-goal.first-duel-goal {
+    grid-template-columns: 1fr;
+  }
+}

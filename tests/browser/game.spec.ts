@@ -39,7 +39,7 @@ async function noOverflow(page: Page) {
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.width);
 }
 
-async function createHero(page: Page) {
+async function createHero(page: Page, finishTutorial = false) {
   await page.goto("./");
   await page.getByRole("button", { name: /Живой мир/ }).click();
   await page
@@ -47,7 +47,15 @@ async function createHero(page: Page) {
     .fill("Проверка браузера");
   await page.getByRole("radio", { name: /Мечник/ }).click();
   await page.getByRole("button", { name: "Начать путь" }).click();
-  await page.getByRole("button", { name: "Пропустить", exact: true }).click();
+  if (finishTutorial) {
+    await expect(page.locator("#tutorial-progress")).toHaveText("1 / 4");
+    for (let step = 0; step < 3; step++) {
+      await page.getByRole("button", { name: "Далее", exact: true }).click();
+    }
+    await page.getByRole("button", { name: "Начать игру", exact: true }).click();
+  } else {
+    await page.getByRole("button", { name: "Пропустить", exact: true }).click();
+  }
   await expect(
     page.getByRole("heading", { name: "Карта окрестностей" }),
   ).toBeVisible();
@@ -100,6 +108,21 @@ test("a second tab waits and resumes the latest campaign after the first closes"
   await other.reload();
   await expect(other.getByRole("heading", { name: "Карта окрестностей" })).toBeVisible();
   await expect(other.getByText("День мира", { exact: true }).locator("..").getByRole("definition")).toHaveText("2");
+});
+
+test("the short introduction leads directly to the first fight and then tournament progress", async ({ page }) => {
+  await createHero(page, true);
+  const firstFight = page.getByRole("button", { name: "Первая дуэль", exact: true });
+  await expect(firstFight).toBeInViewport();
+  await noOverflow(page);
+  await accessible(page);
+  await firstFight.click();
+  const battle = page.getByRole("dialog");
+  await expect(battle.getByRole("heading", { name: "Оцените соперника" })).toBeVisible();
+  await battle.getByRole("button", { name: "Пропустить бой", exact: true }).click();
+  await battle.getByRole("button", { name: "Продолжить игру", exact: true }).click();
+  await expect(firstFight).toHaveCount(0);
+  await expect(page.locator("#next-goal")).toContainText("Чемпионства на этой арене");
 });
 
 test("settings persist, dark screens remain readable and autostart can be paused", async ({

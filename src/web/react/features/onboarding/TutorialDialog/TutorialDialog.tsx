@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import type { ContextualTutorialId } from "../../../../../gameplay/core/WorldTypes";
-import { baseTutorialSteps, contextualTutorialSteps } from "./TutorialCatalog";
+import {
+  baseTutorialSteps,
+  contextualTutorialSteps,
+  firstVisitTutorialSteps,
+} from "./TutorialCatalog";
 import {
   isWorldPageAvailable,
   WORLD_PAGE_IDS,
@@ -29,7 +33,12 @@ export function TutorialDialog({
     focus: document.activeElement as HTMLElement | null,
   }));
   const [steps] = useState(() =>
-    (id === "base" ? baseTutorialSteps : contextualTutorialSteps[id]).filter(
+    (id === "base"
+      ? firstVisit
+        ? firstVisitTutorialSteps
+        : baseTutorialSteps
+      : contextualTutorialSteps[id]
+    ).filter(
       (step) =>
         (!step.feature || game.isFeatureUnlocked(step.feature)) &&
         WORLD_PAGE_IDS.includes(step.page as WorldPageId) &&
