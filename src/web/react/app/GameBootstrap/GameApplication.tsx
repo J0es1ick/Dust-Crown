@@ -4,12 +4,9 @@ import { GameStore } from "../state/GameStore";
 import { GameProvider } from "../state/GameContext";
 import { createBrowserStorage } from "../state/BrowserStorage";
 import type { GameMode } from "../../features/onboarding/ModeChoice/ModeChoice";
+import { CampaignSession } from "./CampaignSession";
 
-export default function GameApplication({
-  initialMode,
-}: {
-  initialMode?: GameMode;
-}) {
+function GameRuntime({ initialMode }: { initialMode?: GameMode }) {
   const [store] = useState(
     () =>
       new GameStore(
@@ -31,5 +28,17 @@ export default function GameApplication({
         <App initialMode={initialMode} />
       </AppErrorBoundary>
     </GameProvider>
+  );
+}
+
+export default function GameApplication({
+  initialMode,
+}: {
+  initialMode?: GameMode;
+}) {
+  return (
+    <CampaignSession>
+      <GameRuntime initialMode={initialMode} />
+    </CampaignSession>
   );
 }

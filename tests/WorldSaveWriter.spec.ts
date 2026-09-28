@@ -50,6 +50,23 @@ describe("background world saves", () => {
     expect(writer.isSaving).toBe(false);
   });
 
+  test("rejects a worker reply and unload flush after another session saves", async () => {
+    const { storage, repository, worker, writer, save } = setup();
+    repository.save(save);
+    const other = new WorldSaveRepository(storage, "save");
+    const newer = other.load()!.save;
+    const pending = writer.save(save);
+    const rejected = expect(pending).rejects.toThrow(/другой вкладке/);
+    newer.worldDay += 1;
+    other.save(newer);
+    const primary = storage.getItem(repository.primaryKey);
+    worker.reply();
+    await rejected;
+    expect(() => writer.flushSync(save)).toThrow(/другой вкладке/);
+    expect(storage.getItem(repository.primaryKey)).toBe(primary);
+    expect(writer.isSaving).toBe(false);
+  });
+
   test("coalesces a burst to the latest snapshot and resolves superseded requests after it is durable", async () => {
     const { repository, worker, writer, save } = setup();
     const requests = [writer.save(save)];

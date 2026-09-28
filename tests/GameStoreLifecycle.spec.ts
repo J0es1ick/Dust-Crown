@@ -33,6 +33,32 @@ function deferredText() {
 }
 
 describe("React save lifecycle", () => {
+  test.each(["action", "flush", "reset", "import"])("protects another session's progress during %s", async (operation) => {
+    const storage = new MemoryStorage();
+    const first = new GameStore(storage);
+    first.replaceGame(gameFor());
+    first.flush();
+    const second = new GameStore(storage);
+    second.attach(WorldGame.restore(second.repository.load()!.save));
+    const staleGold = second.game!.save.hero.gold;
+    first.act((game) => { game.save.hero.gold += 100; });
+    first.flush();
+    const primary = storage.getItem(first.repository.primaryKey);
+    const backup = storage.getItem(first.repository.backupKey);
+
+    if (operation === "action") second.act((game) => { game.save.hero.gold += 10; });
+    if (operation === "flush") second.flush();
+    if (operation === "reset") second.reset();
+    if (operation === "import") await expect(second.importSave(JSON.stringify(gameFor("Другой герой").save))).rejects.toThrow(/другой вкладке/);
+
+    expect(second.game!.save.hero.gold).toBe(staleGold);
+    expect(storage.getItem(first.repository.primaryKey)).toBe(primary);
+    expect(storage.getItem(first.repository.backupKey)).toBe(backup);
+    second.dispose();
+    expect(storage.getItem(first.repository.primaryKey)).toBe(primary);
+    first.dispose();
+  });
+
   let initial: GameSave;
   beforeAll(() => {
     initial = WorldGame.create("Текущий герой", "Knight", 70_202).save;

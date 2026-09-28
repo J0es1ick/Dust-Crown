@@ -79,6 +79,29 @@ describe("React recovery controls", () => {
     return <h1>{game.save.hero.name}</h1>;
   }
 
+  test("a save conflict stops play and leaves only export and reload available", async () => {
+    store.replaceGame(gameFor("Текущая летопись"));
+    store.initialize("world");
+    store.flush();
+    const other = new GameStore(storage);
+    const newer = other.repository.load()!.save;
+    newer.hero.gold += 100;
+    other.repository.save(newer);
+    const primary = storage.getItem(store.repository.primaryKey);
+    const action = jest.fn();
+    store.act(action);
+
+    const ui = render(<GameProvider store={store}><App /></GameProvider>);
+    await ui.findByRole("heading", { name: "Сохранение обновлено в другой вкладке" });
+    expect(action).not.toHaveBeenCalled();
+    expect(ui.getByRole("button", { name: "Скачать сохранение" })).toBeTruthy();
+    expect(ui.getByRole("button", { name: "Загрузить актуальную летопись" })).toBeTruthy();
+    expect(ui.queryByRole("button", { name: "Начать новую игру" })).toBeNull();
+    expect(ui.queryByRole("button", { name: "Загрузить из файла" })).toBeNull();
+    expect(storage.getItem(store.repository.primaryKey)).toBe(primary);
+    other.dispose();
+  });
+
   test("a valid recovery import releases a failed app boundary without a page reload", async () => {
     store.attach(gameFor("Сбой интерфейса"));
     const ui = render(

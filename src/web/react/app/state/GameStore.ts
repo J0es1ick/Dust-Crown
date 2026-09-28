@@ -2,6 +2,7 @@ import { WorldGame } from "../../../../gameplay/core/WorldGame";
 import {
   parseWorldSave,
   WorldSaveRepository,
+  WorldSaveConflictError,
   type KeyValueStorage,
 } from "../../../../gameplay/save/WorldSaveStorage";
 import {
@@ -59,7 +60,14 @@ export interface LootNotice {
 }
 
 export interface AppSnapshot {
-  mode: "choose" | "loading" | "creation" | "basic" | "world" | "error";
+  mode:
+    | "choose"
+    | "loading"
+    | "creation"
+    | "basic"
+    | "world"
+    | "error"
+    | "conflict";
   page: WorldPageId;
   dialogs: GameDialog[];
   error: string | null;
@@ -127,6 +135,7 @@ export class GameStore {
 
   private assertActive(): void {
     if (this.disposed) throw new Error("Эта игровая сессия уже закрыта.");
+    if (this.snapshot.mode === "conflict") throw new WorldSaveConflictError();
   }
 
   public hasSavedGame(): boolean {
@@ -377,6 +386,7 @@ export class GameStore {
 
   private installImportedGame(game: WorldGame): void {
     this.assertActive();
+    this.repository.assertUnchanged();
     if (this.game) {
       try {
         this.writer.flushSync(this.game.save);
@@ -424,13 +434,12 @@ export class GameStore {
     this.generation += 1;
     this.writer.cancel();
     try {
-      [
-        this.repository.temporaryKey,
-        this.repository.backupKey,
-        this.repository.battleCheckpointKey,
-        this.repository.primaryKey,
-      ].forEach((key) => this.storage.removeItem(key));
-    } catch {
+      this.repository.clear();
+    } catch (error) {
+      if (error instanceof WorldSaveConflictError) {
+        this.fail(error);
+        return;
+      }
       this.persist();
       this.fail(
         new Error(
@@ -508,6 +517,7 @@ export class GameStore {
   ): T | undefined => {
     if (!this.game || this.disposed) return;
     try {
+      this.repository.assertUnchanged();
       const result = action(this.game);
       this.persist(options);
       this.publish();
@@ -683,6 +693,17 @@ export class GameStore {
     });
 
   public fail = (error: unknown, title = "Проверьте условие"): void => {
+    if (error instanceof WorldSaveConflictError) {
+      this.writer.cancel();
+      this.update({
+        mode: "conflict",
+        error: error.message,
+        dialogs: [],
+        effects: [],
+        loot: [],
+      });
+      return;
+    }
     this.notify({
       eyebrow: "ДЕЙСТВИЕ НЕ ВЫПОЛНЕНО",
       title,

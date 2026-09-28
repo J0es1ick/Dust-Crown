@@ -83,6 +83,25 @@ async function changeEquipmentFromHero(page: Page) {
   await expect(page).toHaveURL(/#\/hero$/);
 }
 
+test("a second tab waits and resumes the latest campaign after the first closes", async ({ page, context }) => {
+  await createHero(page);
+  const other = await context.newPage();
+  await other.goto("./");
+  await expect(other.getByRole("heading", { name: "Ожидаем доступ к игре" })).toBeVisible();
+  await expect(other.getByRole("button", { name: "Начать дуэль", exact: true })).toHaveCount(0);
+  await accessible(other);
+  await noOverflow(other);
+  await page.getByRole("button", { name: "Начать дуэль", exact: true }).first().click();
+  await page.getByRole("button", { name: "Пропустить бой", exact: true }).click();
+  await page.getByRole("button", { name: "Продолжить игру", exact: true }).click();
+  await page.close();
+  await expect(other.getByRole("heading", { name: "Карта окрестностей" })).toBeVisible();
+  await expect(other.getByText("День мира", { exact: true }).locator("..").getByRole("definition")).toHaveText("2");
+  await other.reload();
+  await expect(other.getByRole("heading", { name: "Карта окрестностей" })).toBeVisible();
+  await expect(other.getByText("День мира", { exact: true }).locator("..").getByRole("definition")).toHaveText("2");
+});
+
 test("settings persist, dark screens remain readable and autostart can be paused", async ({
   page,
 }) => {

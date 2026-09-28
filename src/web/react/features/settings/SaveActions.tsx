@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { SaveTransferController } from "../../app/state/SaveTransferController";
 import { useGameStore } from "../../app/state/GameContext";
 
-export function SaveActions() {
+export function SaveActions({ readOnly = false }: { readOnly?: boolean }) {
   const store = useGameStore();
   const input = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
@@ -93,33 +93,37 @@ export function SaveActions() {
           Скачать сохранение
         </button>
       )}
-      <button
-        className="plain-button"
-        disabled={busy}
-        onClick={() => input.current?.click()}
-      >
-        {busy ? "Проверяем файл…" : "Загрузить из файла"}
-      </button>
-      <button
-        className="plain-button"
-        disabled={!store.hasBackup() || busy}
-        onClick={restore}
-      >
-        Вернуть предыдущую копию
-      </button>
-      <button
-        className="plain-button danger"
-        onClick={() => {
-          if (
-            window.confirm(
-              "Удалить текущую летопись и создать нового героя? Это действие нельзя отменить.",
-            )
-          )
-            store.reset();
-        }}
-      >
-        Начать новую игру
-      </button>
+      {!readOnly && (
+        <>
+          <button
+            className="plain-button"
+            disabled={busy}
+            onClick={() => input.current?.click()}
+          >
+            {busy ? "Проверяем файл…" : "Загрузить из файла"}
+          </button>
+          <button
+            className="plain-button"
+            disabled={!store.hasBackup() || busy}
+            onClick={restore}
+          >
+            Вернуть предыдущую копию
+          </button>
+          <button
+            className="plain-button danger"
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Удалить текущую летопись и создать нового героя? Это действие нельзя отменить.",
+                )
+              )
+                store.reset();
+            }}
+          >
+            Начать новую игру
+          </button>
+        </>
+      )}
       <input
         ref={input}
         type="file"

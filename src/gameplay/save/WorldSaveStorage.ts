@@ -48,6 +48,15 @@ export interface WorldSaveIdentity {
   cycle: number;
 }
 
+export class WorldSaveConflictError extends Error {
+  constructor() {
+    super(
+      "Сохранение изменилось в другой вкладке. Скачайте текущую летопись, если хотите сохранить эту ветку прогресса, затем обновите страницу.",
+    );
+    this.name = "WorldSaveConflictError";
+  }
+}
+
 function saveIdentity(save: GameSave): WorldSaveIdentity {
   return {
     heroId: save.hero.id,
@@ -147,6 +156,7 @@ export class WorldSaveRepository {
   private baseBattleId: string | undefined;
   private baseIdentity: WorldSaveIdentity | undefined;
   private baseChecksum: string | null = null;
+  private observed: Array<string | null> | null = null;
 
   public constructor(
     private readonly storage: KeyValueStorage,
@@ -185,7 +195,32 @@ export class WorldSaveRepository {
         return this.loaded(parsed.save, source, serialized);
       }
     }
+    this.observe();
     return null;
+  }
+
+  public assertUnchanged(): void {
+    const current = this.readStoredState();
+    if (
+      this.observed &&
+      current.some((value, index) => value !== this.observed![index])
+    )
+      throw new WorldSaveConflictError();
+    this.observed = current;
+  }
+
+  public clear(): void {
+    this.assertUnchanged();
+    try {
+      [
+        this.temporaryKey,
+        this.backupKey,
+        this.battleCheckpointKey,
+        this.primaryKey,
+      ].forEach((key) => this.storage.removeItem(key));
+    } finally {
+      this.observe();
+    }
   }
 
   public save(save: GameSave): void {
@@ -204,15 +239,21 @@ export class WorldSaveRepository {
     pendingBattleId?: string,
     identity?: WorldSaveIdentity,
   ): void {
-    this.compactStoredCopies();
-    this.writePrimary(serialized);
-    this.storage.removeItem(this.battleCheckpointKey);
-    this.baseBattleId = pendingBattleId;
-    this.baseIdentity = identity;
-    this.baseChecksum = worldSaveChecksum(serialized);
+    this.assertUnchanged();
+    try {
+      this.compactStoredCopies();
+      this.writePrimary(serialized);
+      this.storage.removeItem(this.battleCheckpointKey);
+      this.baseBattleId = pendingBattleId;
+      this.baseIdentity = identity;
+      this.baseChecksum = worldSaveChecksum(serialized);
+    } finally {
+      this.observe();
+    }
   }
 
   public saveBattleProgress(save: GameSave): void {
+    this.assertUnchanged();
     const battle = save.pendingBattle;
     if (
       !battle ||
@@ -230,6 +271,7 @@ export class WorldSaveRepository {
     const checkpoint = serializeBattleCheckpoint(save, this.baseChecksum);
     try {
       this.storage.setItem(this.battleCheckpointKey, checkpoint);
+      this.observe();
     } catch (error) {
       if (!isStorageQuotaError(error)) throw storageWriteError(error);
       this.save(save);
@@ -253,6 +295,7 @@ export class WorldSaveRepository {
     source: LoadedWorldSave["source"],
     serialized: string,
   ): LoadedWorldSave {
+    this.observe();
     const checksum = worldSaveChecksum(serialized);
     const checkpoint = this.storage.getItem(this.battleCheckpointKey);
     if (checkpoint) restoreBattleCheckpoint(save, checkpoint, checksum);
@@ -262,6 +305,16 @@ export class WorldSaveRepository {
       this.baseChecksum = checksum;
     }
     return { save, source };
+  }
+
+  private readStoredState(): Array<string | null> {
+    return [this.primaryKey, this.temporaryKey, this.battleCheckpointKey].map(
+      (key) => this.storage.getItem(key),
+    );
+  }
+
+  private observe(): void {
+    this.observed = this.readStoredState();
   }
 
   private compactStoredCopies(): void {

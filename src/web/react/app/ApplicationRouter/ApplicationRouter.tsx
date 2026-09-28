@@ -43,8 +43,13 @@ export function ApplicationRouter({
   if (mode === "choose") return <ModeScreen />;
   if (mode === "loading") return <LoadingScreen full />;
   if (mode === "creation") return <CreationScreen />;
-  if (mode === "error")
-    return <SaveRecovery error={error ?? "Неизвестная ошибка чтения."} />;
+  if (mode === "error" || mode === "conflict")
+    return (
+      <SaveRecovery
+        error={error ?? "Неизвестная ошибка чтения."}
+        conflict={mode === "conflict"}
+      />
+    );
   if (mode === "basic")
     return (
       <Suspense fallback={<LoadingScreen full />}>

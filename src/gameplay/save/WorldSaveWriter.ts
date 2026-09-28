@@ -45,6 +45,11 @@ export class WorldSaveWriter {
   public save(save: GameSave): Promise<void> {
     if (this.disposed)
       return Promise.reject(new Error("Запись сохранений уже завершена."));
+    try {
+      this.repository.assertUnchanged();
+    } catch (error) {
+      return Promise.reject(error);
+    }
     const id = ++this.revision;
     const promise = new Promise<void>((resolve, reject) =>
       this.waiters.push({ id, resolve, reject }),

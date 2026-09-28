@@ -24,6 +24,40 @@ function copy(save: GameSave): GameSave {
 }
 
 describe("world save safety", () => {
+  it("protects a newer battle checkpoint from a stale full save", () => {
+    const storage = new MemoryStorage();
+    const first = new WorldSaveRepository(storage, "game-save");
+    const game = WorldGame.create("Хранитель", "Knight", 42);
+    game.beginDuel();
+    first.save(game.save);
+    const second = new WorldSaveRepository(storage, "game-save");
+    const stale = second.load()!.save;
+    game.stepPendingBattle();
+    first.saveBattleProgress(game.save);
+    const checkpoint = storage.getItem(first.battleCheckpointKey);
+
+    expect(checkpoint).not.toBeNull();
+    expect(() => second.save(stale)).toThrow(/другой вкладке/);
+    expect(storage.getItem(first.battleCheckpointKey)).toBe(checkpoint);
+  });
+
+  it("rejects a stale session without changing the newer save or its backup", () => {
+    const storage = new MemoryStorage();
+    const first = new WorldSaveRepository(storage, "game-save");
+    const game = WorldGame.create("Хранитель", "Knight", 42);
+    first.save(game.save);
+    const second = new WorldSaveRepository(storage, "game-save");
+    const stale = second.load()!.save;
+    game.save.worldDay += 1;
+    first.save(game.save);
+    const primary = storage.getItem(first.primaryKey);
+    const backup = storage.getItem(first.backupKey);
+
+    expect(() => second.save(stale)).toThrow(/другой вкладке/);
+    expect(storage.getItem(first.primaryKey)).toBe(primary);
+    expect(storage.getItem(first.backupKey)).toBe(backup);
+  });
+
   it("repairs duplicate relic placements and preserves boss paths without awakening them", () => {
     const save = copy(WorldGame.create("Реставратор", "Knight", 122).save);
     const item = createItem(20, { templateId: "wanderer-blade", rarity: "legendary", randomSource: new SeededRandom(9) });

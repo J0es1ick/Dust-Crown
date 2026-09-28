@@ -142,21 +142,34 @@ export function CreationScreen() {
   );
 }
 
-export function SaveRecovery({ error }: { error: string }) {
+export function SaveRecovery({
+  error,
+  conflict = false,
+}: {
+  error: string;
+  conflict?: boolean;
+}) {
   return (
     <main className="save-recovery-screen">
       <section className="save-recovery-card">
-        <p className="eyebrow">СОХРАНЕНИЕ НЕ ПРОЧИТАНО</p>
-        <h1>Летопись требует восстановления</h1>
+        <p className="eyebrow">
+          {conflict ? "ИГРА ПРИОСТАНОВЛЕНА" : "СОХРАНЕНИЕ НЕ ПРОЧИТАНО"}
+        </p>
+        <h1>
+          {conflict
+            ? "Сохранение обновлено в другой вкладке"
+            : "Летопись требует восстановления"}
+        </h1>
         <p role="alert">{error}</p>
         <p>
-          Ваши данные не удалены. Можно повторить чтение, восстановить резервную
-          копию или загрузить экспортированный файл.
+          {conflict
+            ? "Более свежая летопись защищена от перезаписи. Текущий прогресс этой вкладки можно скачать перед обновлением страницы."
+            : "Ваши данные не удалены. Можно повторить чтение, восстановить резервную копию или загрузить экспортированный файл."}
         </p>
         <button className="button primary" onClick={() => location.reload()}>
-          Попробовать снова
+          {conflict ? "Загрузить актуальную летопись" : "Попробовать снова"}
         </button>
-        <SaveActions />
+        <SaveActions readOnly={conflict} />
       </section>
     </main>
   );
