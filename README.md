@@ -143,6 +143,8 @@
 
 ## Локальный запуск
 
+Требуется Node.js 22.12 или новее. В `.nvmrc`, CI и Docker используется Node.js 22.
+
 ```bash
 npm ci
 npm run dev
@@ -178,6 +180,13 @@ CI выполняет проверки при pull request и push в `main`. Jo
 
 ```bash
 npm run dev_con
+```
+
+Оба консольных режима доступны в Docker. Именованный том сохраняет кампанию между перезапусками контейнера:
+
+```bash
+docker build -t dust-and-crown .
+docker run --rm -it --mount type=volume,source=dust-and-crown-save,target=/app/.game-save dust-and-crown
 ```
 
 ## Браузерный интерфейс и производительность

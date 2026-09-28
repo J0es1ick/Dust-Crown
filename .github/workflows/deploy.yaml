@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
@@ -41,6 +41,9 @@ jobs:
           name: browser-test-results
           path: test-results/
           retention-days: 7
+
+      - run: docker build --tag dust-and-crown:test .
+      - run: node tests/container/smoke.mjs
 
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
