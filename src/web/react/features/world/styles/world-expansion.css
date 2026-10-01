@@ -192,7 +192,7 @@
   background: var(--surface-raised, #ece5d7);
 }
 .world-control-card > small {
-  color: var(--text-soft, #716959);
+  color: var(--muted);
   font:
     10px/1.3 "Courier New",
     monospace;
@@ -288,7 +288,7 @@
 .living-world-section.world-territories {
   border-top-color: #44433b;
 }
-.living-world-section.future-bosses {
+.living-world-section.faction-hunter {
   border-top-color: #914c43;
 }
 .living-world-section.world-relics {
@@ -439,6 +439,21 @@
 .world-relic-list .paged-list-item {
   min-width: 0;
 }
+.world-activities .paged-list-columns {
+  align-items: stretch;
+  grid-auto-rows: 1fr;
+}
+.world-activities .paged-list-item {
+  display: flex;
+}
+.world-activities .paged-list-item > article {
+  width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.world-activities .living-world-story {
+  grid-template-rows: 1fr auto;
+}
 .living-world-section .empty-copy {
   grid-column: 1 / -1;
   margin: 0;
@@ -551,13 +566,11 @@
   border: 1px solid var(--border-muted, #b0a590);
   background: var(--surface-raised, #eee7da);
 }
-.world-dynasty-list,
-.future-boss-list {
+.world-dynasty-list {
   display: grid;
   gap: 7px;
 }
-.world-dynasty-list article,
-.future-boss-list article {
+.world-dynasty-list article {
   display: grid;
   gap: 3px;
   padding: 10px 11px;
@@ -565,41 +578,30 @@
   background: var(--surface-base, #ded7c8);
 }
 .world-dynasty-list span,
-.world-dynasty-list small,
-.future-boss-list span,
-.future-boss-list small {
+.world-dynasty-list small {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.4;
 }
-.future-boss-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+.school-prestige {
+  margin-top: 9px;
+  border-top: 1px solid var(--border-muted, var(--line));
+  padding-top: 9px;
 }
-.future-boss-list article {
-  --faction-accent: #8e5146;
+.school-prestige summary {
+  color: var(--text-warm, #76551f);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
-.future-boss-list article.dormant {
-  --faction-accent: #817765;
-}
-.future-boss-list article.defeated {
-  --faction-accent: #5e705f;
-  opacity: 0.76;
-}
-.future-boss-list article.faction-hunter {
-  --faction-accent: #914c43;
-  background: var(--surface-base, #e5d2c8);
-}
-.future-boss-list p {
-  margin: 3px 0 0;
-  color: var(--text-soft, #625b50);
+.school-prestige p {
+  margin: 8px 0 0;
+  color: var(--muted);
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.5;
 }
-.future-boss-action {
-  width: 100%;
-  min-height: 38px;
-  margin-top: 7px;
-}
+
 .world-relic-entry {
   display: grid;
   align-self: start;
@@ -1229,7 +1231,7 @@
   font-size: 14px;
 }
 .reputation-tier-list span {
-  color: var(--text-soft, #526b58);
+  color: var(--text-positive, #426343);
   font:
     700 10px/1.4 "Courier New",
     monospace;
@@ -1261,7 +1263,7 @@
 }
 .faction-perk small {
   grid-row: 1 / span 2;
-  color: var(--text-soft, #756b5c);
+  color: var(--muted);
   font:
     10px/1.3 "Courier New",
     monospace;
@@ -1275,11 +1277,11 @@
   line-height: 1.35;
 }
 .faction-perk.unlocked {
-  border-left: 3px solid var(--border-muted, #58715d);
-  background: var(--surface-base, #dce4d7);
+  border-left: 3px solid var(--green);
+  background: var(--surface-positive, #dce4d7);
 }
 .faction-perk.locked {
-  opacity: 0.72;
+  border-left: 3px solid transparent;
 }
 
 .narrative-layer {
@@ -2039,7 +2041,6 @@
   }
   .world-control-grid,
   .territory-ledger,
-  .future-boss-list,
   .battle-analysis-fighters {
     grid-template-columns: 1fr;
   }
@@ -2124,6 +2125,41 @@
 }
 .faction-campaign button {
   white-space: normal;
+}
+@media (min-width: 981px) {
+  .faction-grid {
+    align-items: stretch;
+    row-gap: 10px;
+  }
+  .faction-card {
+    display: grid;
+    grid-row: span 19;
+    grid-template-rows: subgrid;
+    min-width: 0;
+  }
+  .faction-card > :is(p, h3, blockquote) {
+    margin: 0;
+  }
+  .faction-card .faction-perk-list {
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+  }
+  .faction-card .faction-campaign {
+    grid-row: span 8;
+    grid-template-rows: subgrid;
+  }
+  .faction-card .faction-perk {
+    align-content: start;
+  }
+  .faction-campaign > strong {
+    grid-row: 6;
+  }
+  .faction-campaign > strong + p {
+    grid-row: 7;
+  }
+  .faction-campaign > strong + p + button {
+    grid-row: 8;
+  }
 }
 .battle-equipment-resonance {
   margin-top: 0.6rem;

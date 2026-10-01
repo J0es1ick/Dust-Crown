@@ -299,7 +299,6 @@
 
 .living-world-board .living-world-list,
 .living-world-board .world-dynasty-list,
-.living-world-board .future-boss-list,
 .living-world-board .world-relic-list {
   max-height: 560px;
   overflow-y: auto;

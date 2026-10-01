@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { WorldGame } from "../../src/gameplay/core/WorldGame";
+import { exportWorldSave } from "../../src/gameplay/save/WorldSaveStorage";
+import { ARENAS } from "../../src/catalogs/WorldCatalog";
 
 async function accessible(page: Page) {
   await page.evaluate(async () => {
@@ -60,6 +63,84 @@ async function createHero(page: Page, finishTutorial = false) {
     page.getByRole("heading", { name: "Карта окрестностей" }),
   ).toBeVisible();
 }
+
+async function filledRows(page: Page, selector: string) {
+  const rows = await page.locator(selector).evaluate((element) => {
+    const container = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    const left = container.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
+    const right = container.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth);
+    const buttons = Array.from(element.querySelectorAll<HTMLButtonElement>(':scope > button')).map((button) => ({ left: button.getBoundingClientRect().left, right: button.getBoundingClientRect().right, top: button.offsetTop }));
+    return [...new Set(buttons.map((button) => button.top))].map((top) => {
+      const row = buttons.filter((button) => button.top === top);
+      return { leftGap: Math.min(...row.map((button) => button.left)) - left,
+        rightGap: right - Math.max(...row.map((button) => button.right)) };
+    });
+  });
+  expect(rows.length).toBeGreaterThan(0);
+  rows.forEach((row) => {
+    expect(Math.abs(row.leftGap)).toBeLessThan(2);
+    expect(Math.abs(row.rightGap)).toBeLessThan(2);
+  });
+}
+
+test("discovery layouts fill available space and world cards align in both themes", async ({ page }, testInfo) => {
+  await createHero(page);
+  const navigation = page.getByRole("navigation", { name: "Разделы игры" });
+  await filledRows(page, ".map-shortcuts");
+  await filledRows(page, ".map-quick-actions");
+  await expect(page.getByRole("button", { name: /Лига короны/ })).toHaveCount(0);
+  await navigation.getByRole("button", { name: "Снаряжение", exact: true }).click();
+  await expect(navigation.getByRole("button", { name: "Кузница", exact: true })).toHaveCount(0);
+  await expect(navigation.getByRole("button", { name: "Наследие", exact: true })).toHaveCount(0);
+
+  const game = WorldGame.create("Длинное имя чемпиона", "Knight", Date.now());
+  game.save.hero.level = 30;
+  game.save.hero.highestArena = ARENAS.length - 1;
+  game.save.hero.arenaWins = ARENAS.map(() => 1);
+  game.save.hero.rating = 100_000;
+  game.save.hero.factionReputation = { wardens: 23, "free-company": 17, "red-book": 10 };
+  game.save.tutorialCompleted = true;
+  game.save.seenContextualTutorialIds = ["forge", "equipment-legacy", "contracts", "crown-league", "world", "adaptation"];
+  game.consumeFeatureUnlocks();
+  game.save.enemies.filter((enemy) => enemy.alive).forEach((enemy, index) => {
+    enemy.lastActivity = { day: 1, activity: "training", description: index % 2 ? "Готовится к турниру." : "Ищет встречу с давним соперником, чтобы продолжить личное соперничество и вернуть потерянное место в рейтинге." };
+    const profile = game.save.npcLife!.profiles[enemy.id];
+    if (profile) profile.nickname = index % 2 ? "Стойкий" : "Хранитель мифического шлема церемониймейстера · Воля королей";
+  });
+  await navigation.getByRole("button", { name: "Настройки", exact: true }).click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("region", { name: "Летопись", exact: true }).locator('input[type="file"]').setInputFiles({ name: "campaign.json", mimeType: "application/json", buffer: Buffer.from(exportWorldSave(game.save)) });
+  await expect(page.locator(".hero-summary strong")).toHaveText(game.save.hero.name);
+  for (const theme of ["light", "dark"]) {
+    await navigation.getByRole("button", { name: "Настройки", exact: true }).click();
+    await page.getByRole("combobox", { name: "Тема", exact: true }).selectOption(theme);
+    await page.getByRole("checkbox", { name: "Меньше анимаций" }).check();
+    await navigation.getByRole("button", { name: "Карта", exact: true }).click();
+    await filledRows(page, ".map-shortcuts");
+    await filledRows(page, ".map-quick-actions");
+    await noOverflow(page);
+    await navigation.getByRole("button", { name: "Мир", exact: true }).click();
+    await navigation.getByRole("button", { name: "Контракты", exact: true }).click();
+    await expect(page.locator(".faction-card")).toHaveCount(3);
+    if (testInfo.project.name === "desktop") {
+      for (const selector of ["h3", "blockquote", ".faction-control-summary", ".stat-row", ".faction-perk-list > strong", ".faction-perk:nth-child(2)", ".faction-perk:nth-child(3)", ".faction-perk:nth-child(4)", ".faction-campaign h4", ".faction-campaign button"]) {
+        const tops = await page.locator(`.faction-card ${selector}`).evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
+        expect(Math.max(...tops) - Math.min(...tops), selector).toBeLessThan(2);
+      }
+    }
+    await noOverflow(page);
+    await accessible(page);
+    await page.locator(".faction-grid").screenshot({ path: testInfo.outputPath(`factions-${theme}.png`) });
+    await navigation.getByRole("button", { name: "Бойцы и школы", exact: true }).click();
+    const heights = await page.locator(".world-activities .paged-list-item > article").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
+    expect(heights.length).toBeGreaterThan(1);
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(2);
+    await noOverflow(page);
+    await accessible(page);
+    await page.locator(".world-activities").screenshot({ path: testInfo.outputPath(`fighters-${theme}.png`) });
+  }
+});
 
 async function changeEquipmentFromHero(page: Page) {
   const slot = page.getByRole("button", {
