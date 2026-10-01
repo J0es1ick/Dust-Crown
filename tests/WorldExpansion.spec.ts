@@ -83,7 +83,7 @@ describe("расширение живого мира", () => {
 
   test("пробуждает заслужившую имя реликвию по выбранному пути", () => {
     const game = WorldGame.create("Хранитель", "Knight", 1_000);
-    game.save.hero.arenaWins[3] = 1;
+    game.save.hero.arenaWins[1] = 1;
     const relic = createItem(12, { classId: "Knight", rarity: "legendary", slot: "weapon" });
     relic.relicTier = 1;
     relic.relicRenown = 5;
@@ -99,7 +99,7 @@ describe("расширение живого мира", () => {
 
   test("сообщает о постоянном усилении реликвии после боя", () => {
     const game = WorldGame.create("Наследник", "Knight", 1_000);
-    game.save.hero.arenaWins[3] = 1;
+    game.save.hero.arenaWins[1] = 1;
     game.save.hero.level = 30;
     const relic = createItem(30, { classId: "Knight", rarity: "legendary", slot: "weapon" });
     relic.relicRenown = 3;
@@ -127,16 +127,16 @@ describe("расширение живого мира", () => {
     const withContracts = WorldGame.restore(JSON.parse(JSON.stringify(game.save)));
     expect(withContracts.isFeatureUnlocked("contracts")).toBe(true);
     expect(withContracts.save.contractOffers).toHaveLength(3);
-    expect(withContracts.save.pendingFeatureUnlocks.map((entry) => entry.id)).toEqual(["contracts"]);
+    expect(withContracts.save.pendingFeatureUnlocks.map((entry) => entry.id)).toEqual(["contracts", "forge"]);
 
     const consumed = withContracts.consumeFeatureUnlocks();
-    expect(consumed).toEqual([expect.objectContaining({ id: "contracts", tutorialId: "contracts" })]);
+    expect(consumed).toEqual([expect.objectContaining({ id: "contracts", tutorialId: "contracts" }), expect.objectContaining({ id: "forge", tutorialId: "forge" })]);
     withContracts.markTutorialSeen("contracts");
     const restored = WorldGame.restore(JSON.parse(JSON.stringify(withContracts.save)));
     expect(restored.consumeFeatureUnlocks()).toEqual([]);
     expect(restored.hasSeenTutorial("contracts")).toBe(true);
 
-    withContracts.save.hero.arenaWins[3] = 1;
+    withContracts.save.hero.arenaWins[1] = 1;
     const legacyUnlock = withContracts.consumeFeatureUnlocks();
     expect(legacyUnlock).toEqual([expect.objectContaining({ id: "equipment-legacy" })]);
     expect(withContracts.isFeatureUnlocked("equipment-legacy")).toBe(true);

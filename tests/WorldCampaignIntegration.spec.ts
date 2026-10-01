@@ -89,6 +89,7 @@ describe("WorldGame campaign services", () => {
 
   test("does not consume the loot stream when an unaffordable reforge is rejected", () => {
     const game = WorldGame.create("Кузнец", "Swordsman", 181);
+    game.save.hero.arenaWins[0] = 1;
     const item = game.save.hero.inventory[0];
     const sourceStat = Object.keys(item.stats)[0] as keyof typeof item.stats;
     game.save.hero.gold = 0;

@@ -86,6 +86,7 @@ describe("React application integration", () => {
   async function loadedWorld() {
     const game = WorldGame.create("Готовый герой", "Knight", 54801);
     game.save.tutorialCompleted = true;
+    game.save.seenContextualTutorialIds = ["world", "contracts", "forge", "equipment-legacy", "crown-league"];
     store.replaceGame(game);
     const ui = application();
     await ui.findByRole(
@@ -256,7 +257,7 @@ describe("React application integration", () => {
     ).toBe("true");
   });
 
-  test("the next goal follows due tournaments and changes to the elite endgame after the final championship", async () => {
+  test("the next goal follows due tournaments, first place and the league invitation", async () => {
     const { game, ui } = await loadedWorld();
     const goal = () =>
       within(ui.getByRole("region", { name: "Ближайшая цель" }));
@@ -279,6 +280,8 @@ describe("React application integration", () => {
         current.save.hero.arenaWins[ARENAS.length - 1] = 1;
       }),
     );
+    expect(goal().getByRole("heading").textContent).toBe("Первое место в мировом рейтинге");
+    act(() => store.act((current) => { current.save.hero.rating = 100_000; }));
     expect(goal().getByRole("heading").textContent).toBe(
       "Путь к вершине элиты",
     );
@@ -334,6 +337,10 @@ describe("React application integration", () => {
     game.save.enemies.find(
       (fighter) => fighter.id === veteranId,
     )!.carriedFromCycle = 7;
+    act(() => store.act((current) => {
+      current.save.hero.arenaWins[ARENAS.length - 1] = 1;
+      current.save.hero.rating = 100_000;
+    }));
     const routes = [
       ["Герой", "Ваш герой"],
       ["Снаряжение", "Инвентарь"],

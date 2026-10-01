@@ -167,7 +167,6 @@ test("settings persist, dark screens remain readable and autostart can be paused
     "Герой",
     "Снаряжение",
     "Навыки",
-    "Кузница",
     "Коллекции",
     "Лавка",
     "Рейтинги",
@@ -178,6 +177,10 @@ test("settings persist, dark screens remain readable and autostart can be paused
     await navigation
       .getByRole("button", { name: new RegExp(`^${name}(?:\\s*\\d+)?$`) })
       .click();
+    if (name === "Мир") {
+      await expect(page.locator("#tutorial-progress")).toHaveText("1 / 6");
+      await page.getByRole("button", { name: "Пропустить", exact: true }).click();
+    }
     if (name === "Герой") await changeEquipmentFromHero(page);
     await noOverflow(page);
     await accessible(page);
@@ -327,6 +330,10 @@ test("hero, battle, saved reload and touch-readable tournament rules", async ({
     await expect(
       page.getByRole("heading", { name: heading, exact: true }),
     ).toBeVisible();
+    if (name === "Мир") {
+      await expect(page.locator("#tutorial-progress")).toHaveText("1 / 6");
+      await page.getByRole("button", { name: "Пропустить", exact: true }).click();
+    }
     if (name === "Герой") await changeEquipmentFromHero(page);
     await noOverflow(page);
     await accessible(page);

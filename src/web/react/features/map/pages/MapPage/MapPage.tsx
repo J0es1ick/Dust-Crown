@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ARENAS, DUNGEONS } from "../../../../../../catalogs/WorldCatalog";
-import { useAppSelector } from "../../../../app/state/GameContext";
+import { useAppSelector, useGame } from "../../../../app/state/GameContext";
 import { PageHeading } from "../../../../shared/ui/common";
 import { ActivityCard } from "../../components/ActivityCard/ActivityCard";
 import { DuelSection } from "../../components/DuelSection/DuelSection";
@@ -21,6 +21,7 @@ import { MapUtilities } from "../../components/MapUtilities/MapUtilities";
 import "../../styles/components.css";
 
 export function MapPage() {
+  const { game } = useGame();
   const { page, shortcuts } = useMapStickyOffsets();
   const navigation = useAppSelector((state) => state.navigation);
   const requestedSection =
@@ -29,7 +30,11 @@ export function MapPage() {
       : undefined;
   const [selectedSection, setSelectedSection] =
     useState<MapSectionId>("duels-section");
-  const activeSection = requestedSection ?? selectedSection;
+  const requested = requestedSection ?? selectedSection;
+  const activeSection =
+    requested === "endgame-section" && !game.isFeatureUnlocked("crown-league")
+      ? "tournaments-section"
+      : requested;
 
   useEffect(() => {
     if (requestedSection) setSelectedSection(requestedSection);

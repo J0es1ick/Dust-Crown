@@ -79,9 +79,25 @@ export function CareersPanel() {
                 <span>Основатель: {dynasty.founderName}</span>
                 <small>
                   {factionFor(dynasty.factionId)?.name ?? "Независимые"} ·
-                  бойцов: {dynasty.memberIds.length} · престиж{" "}
-                  {dynasty.prestige}
+                  учеников за историю: {dynasty.historicalStudents} · живых
+                  учеников: {dynasty.activeStudents}
                 </small>
+                <details className="school-prestige">
+                  <summary>Престиж школы: {dynasty.prestige}</summary>
+                  <p>
+                    Заслуги основателя: {dynasty.founderPrestige}. Заслуги
+                    учеников: +{dynasty.studentPrestige}.
+                  </p>
+                  <p>
+                    Чемпионства учеников за карьеру: {dynasty.championships} ×
+                    4. Победы в высшей лиге: {dynasty.crowns} × 15.
+                  </p>
+                  <p>
+                    Численность не даёт очков. Достижения умерших и завершивших
+                    карьеру учеников сохраняются. Престиж показывает славу школы
+                    и не добавляет скрытых боевых бонусов.
+                  </p>
+                </details>
               </article>
             )}
           />
@@ -91,98 +107,24 @@ export function CareersPanel() {
   );
 }
 
-export function FutureBossesPanel() {
-  const { game, revision } = useGame();
+export function FactionHunterPanel() {
+  const { game } = useGame();
   const begin = useBeginBattle();
-  const bosses = useMemo(
-    () =>
-      [...(game.save.npcLife?.futureBosses ?? [])].sort(
-        (a, b) =>
-          Number(b.status === "available") - Number(a.status === "available") ||
-          b.powerLevel - a.powerLevel,
-      ),
-    [game, revision],
-  );
-  const hunter = game.factionHunter(),
-    availability = game.factionHunterAvailability();
-  const labels: Record<string, string> = {
-    nemesis: "Немезида",
-    "fallen-legend": "Павшая легенда",
-    "relic-bearer": "Носитель реликвии",
-    "dynasty-heir": "Наследник династии",
-  };
+  const hunter = game.factionHunter();
+  if (!hunter) return null;
+  const availability = game.factionHunterAvailability();
   return (
-    <section className="living-world-section future-bosses paper-panel">
-      <p className="eyebrow">ИСТОРИИ, КОТОРЫЕ ЕЩЁ НЕ ЗАКОНЧЕНЫ</p>
-      <h2 data-term="futureBoss" tabIndex={0}>
-        Будущие боссы
-      </h2>
-      {hunter && (
-        <article
-          className="faction-hunter"
-          style={css({
-            "--faction-accent":
-              factionFor(hunter.factionId)?.accent ?? "#914c43",
-          })}
-        >
-          <small>ОХОТНИК ВРАЖДЕБНОЙ ФРАКЦИИ</small>
-          <strong>{hunter.name}</strong>
-          <span>
-            {factionFor(hunter.factionId)?.name ?? "Неизвестная фракция"} ·
-            уровень {hunter.level}
-          </span>
-          <p>{availability.reason}</p>
-          <button
-            className="plain-button future-boss-action"
-            disabled={!availability.unlocked}
-            onClick={() =>
-              begin((current) => current.beginFactionHunterFight())
-            }
-          >
-            Принять бой
-          </button>
-        </article>
-      )}
-      <PagedList
-        className="future-boss-list"
-        items={bosses}
-        getKey={(boss) => boss.id}
-        empty="Некоторые соперники вернутся в новой роли после нескольких сезонов, громкой вражды или утраты легендарного статуса."
-        render={(boss) => {
-          const available = game.futureBossAvailability(boss.id);
-          return (
-            <article className={boss.status}>
-              <small>
-                {boss.status === "available"
-                  ? "МОЖЕТ ПОЯВИТЬСЯ"
-                  : boss.status === "defeated"
-                    ? "ИСТОРИЯ ЗАВЕРШЕНА"
-                    : `НЕ РАНЬШЕ ДНЯ ${boss.earliestAppearanceDay}`}
-              </small>
-              <strong>{boss.name}</strong>
-              <span>
-                {labels[boss.archetype] ?? "Особый противник"} · сила{" "}
-                {boss.powerLevel}
-              </span>
-              <p>{boss.reason}</p>
-              <button
-                className="plain-button future-boss-action"
-                title={available.reason}
-                disabled={!available.unlocked}
-                onClick={() =>
-                  begin((current) => current.beginFutureBossFight(boss.id))
-                }
-              >
-                {available.unlocked
-                  ? "Встретиться с противником"
-                  : boss.status === "defeated"
-                    ? "Побеждён"
-                    : "След ещё не проявился"}
-              </button>
-            </article>
-          );
-        }}
-      />
+    <section className="living-world-section faction-hunter paper-panel">
+      <p className="eyebrow">ОХОТНИК ВРАЖДЕБНОЙ ФРАКЦИИ</p>
+      <h2>{hunter.name}</h2>
+      <p>{availability.reason}</p>
+      <button
+        className="plain-button"
+        disabled={!availability.unlocked}
+        onClick={() => begin((current) => current.beginFactionHunterFight())}
+      >
+        Принять бой
+      </button>
     </section>
   );
 }

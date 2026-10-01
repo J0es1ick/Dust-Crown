@@ -85,10 +85,8 @@ describe("React world map", () => {
         <MapPage />
       </GameProvider>,
     );
-    expect(
-      (ui.getByRole("button", { name: /Кузница/ }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(false);
+    expect(ui.queryByRole("button", { name: /Кузница/ })).toBeNull();
+    expect(ui.queryByRole("button", { name: /Лига короны/ })).toBeNull();
     expect(
       (ui.getByRole("button", { name: /Контракты/ }) as HTMLButtonElement)
         .disabled,
@@ -246,7 +244,8 @@ describe("React world map", () => {
     expect(store.getSnapshot().dialogs).toContainEqual({ kind: "battle" });
   });
 
-  test("new chronicle status opens the detailed requirements before qualification", () => {
+  test("new chronicle status opens requirements after the invitation", () => {
+    game.save.unlockedFeatureIds.push("crown-league");
     const status = game.newGamePlusStatus();
     const ui = render(
       <GameProvider store={store}>

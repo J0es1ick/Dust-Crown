@@ -39,6 +39,7 @@ describe("React shop supplies", () => {
     };
     game.save.hero.gold = 200_000;
     game.save.hero.temperingMarks = 2;
+    game.save.hero.arenaWins[0] = 1;
     store.attach(game);
   });
 

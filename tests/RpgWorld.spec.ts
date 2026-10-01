@@ -129,6 +129,7 @@ describe("постоянный RPG-мир", () => {
 
   test("закаляет конкретный предмет только за редкие печати", () => {
     const game = WorldGame.create("Кузнец", "Knight", 1_000);
+    game.save.hero.arenaWins[0] = 1;
     const item = game.save.hero.inventory[0];
     const beforeLevel = item.level;
     const beforeStats = { ...item.stats };

@@ -187,6 +187,7 @@ describe("покупка печатей закалки", () => {
 describe("печати магазина в игровом мире", () => {
   test("позволяет многократно покупать в один день даже при распроданном снаряжении", () => {
     const game = WorldGame.restore(shopSave());
+    game.save.hero.arenaWins[0] = 1;
     game.save.shopOffers.forEach((offer) => { offer.sold = true; });
     const expected = copy(game.save);
     const unitPrice = game.temperingMarkPrice();
@@ -223,6 +224,7 @@ describe("печати магазина в игровом мире", () => {
 
   test("сразу использует купленную печать для закалки предмета", () => {
     const game = WorldGame.restore(shopSave());
+    game.save.hero.arenaWins[0] = 1;
     const item = game.save.hero.inventory[0];
     const level = item.level;
     const day = game.save.worldDay;
@@ -243,6 +245,7 @@ describe("печати магазина в игровом мире", () => {
 
   test("сразу использует купленную печать для перековки", () => {
     const game = WorldGame.restore(shopSave());
+    game.save.hero.arenaWins[0] = 1;
     const item = createItem(15, { classId: "Knight", rarity: "rare", randomSource: new SeededRandom("shop-reforge") });
     game.save.hero.inventory.push(item);
     const cost = reforgeCost(item);

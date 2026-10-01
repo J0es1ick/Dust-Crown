@@ -75,8 +75,17 @@ export function Header() {
   const hero = game.save.hero;
   const eliteRank = game.heroEliteRank();
   const group = WORLD_PAGE_NAV_GROUP[page];
+  const secondaryPages = WORLD_PAGE_IDS.filter(
+    (id) =>
+      id !== "shop" &&
+      id !== "class-change" &&
+      WORLD_PAGE_NAV_GROUP[id] === group &&
+      isWorldPageAvailable(id, (feature) => game.isFeatureUnlocked(feature)),
+  );
   const primaryStatus: Record<(typeof groups)[number]["page"], string> = {
-    map: "5 направлений",
+    map: game.isFeatureUnlocked("crown-league")
+      ? "5 направлений"
+      : "4 направления",
     hero: `ур. ${hero.level}`,
     arsenal: itemCount(hero.inventory.length),
     shop: `${hero.gold.toLocaleString("ru-RU")} ¤`,
@@ -231,17 +240,9 @@ export function Header() {
         <div
           className="nav-secondary"
           data-group={group}
-          hidden={group === "shop" || group === "map" || group === "settings"}
+          hidden={secondaryPages.length < 2}
         >
-          {WORLD_PAGE_IDS.filter(
-            (id) =>
-              id !== "shop" &&
-              id !== "class-change" &&
-              WORLD_PAGE_NAV_GROUP[id] === group &&
-              isWorldPageAvailable(id, (feature) =>
-                game.isFeatureUnlocked(feature),
-              ),
-          ).map((id) => (
+          {secondaryPages.map((id) => (
             <button
               key={id}
               data-page={id}

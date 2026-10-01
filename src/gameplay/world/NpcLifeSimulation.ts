@@ -39,6 +39,7 @@ export interface NpcDynasty {
   foundedDay: number;
   memberIds: string[];
   prestige: number;
+  alumni?: { count: number; championships: number; crowns: number };
 }
 
 export interface FutureBossRecord {
@@ -105,11 +106,7 @@ export interface NpcReferenceCleanupResult {
 }
 
 export interface NpcCareerTransition {
-  kind:
-    | "became-legend"
-    | "left-legend-five"
-    | "became-mentor"
-    | "marked-future-boss";
+  kind: "became-legend" | "left-legend-five" | "became-mentor";
   fighterId: string;
   description: string;
   mentorId?: string;
@@ -122,7 +119,6 @@ export interface NpcSeasonResult {
   transitions: NpcCareerTransition[];
   mentorsCreated: MentorRecord[];
   dynastiesCreated: NpcDynasty[];
-  futureBossesCreated: FutureBossRecord[];
 }
 
 export interface NpcSeasonContext {
@@ -373,10 +369,6 @@ function activityScores(
     scores.training += 15;
     scores.dungeon += 8;
   }
-  if (profile.career === "future-boss") {
-    scores.arena += 25;
-    scores.dungeon += 15;
-  }
   if (desiredSet && setMissingPiece(enemy, desiredSet)) {
     scores.dungeon += 42;
     scores.shopping += (enemy.gold ?? 0) >= 120 ? 34 : 8;
@@ -547,49 +539,6 @@ function dynastyIdFor(enemy: EnemyProfile, day: number): string {
   return `dynasty-${enemy.id}-${day}`;
 }
 
-function futureBossIdFor(
-  enemy: EnemyProfile,
-  archetype: FutureBossArchetype,
-): string {
-  return `future-boss-${enemy.id}-${archetype}`;
-}
-
-function strongestRivalry(enemy: EnemyProfile): NpcRelationship | undefined {
-  return Object.values(enemy.relationships ?? {})
-    .filter((relationship) => relationship.kind === "rival")
-    .sort((first, second) => second.intensity - first.intensity)[0];
-}
-
-function futureBossArchetype(
-  enemy: EnemyProfile,
-  profile: NpcLifeProfile,
-): FutureBossArchetype | undefined {
-  if (
-    strongestRivalry(enemy)?.intensity &&
-    strongestRivalry(enemy)!.intensity >= 70
-  )
-    return "nemesis";
-  if (enemy.legendSinceDay && profile.career !== "legend")
-    return "fallen-legend";
-  if (equippedItems(enemy).some((item) => item.worldRelicId))
-    return "relic-bearer";
-  if (profile.dynastyId && enemy.tournamentWins >= 6) return "dynasty-heir";
-  return undefined;
-}
-
-function futureBossReason(
-  enemy: EnemyProfile,
-  archetype: FutureBossArchetype,
-): string {
-  if (archetype === "nemesis")
-    return `${enemy.name} превратил многолетнее соперничество в личную охоту.`;
-  if (archetype === "fallen-legend")
-    return `${enemy.name} потерял место легенды, но не отказался от возвращения.`;
-  if (archetype === "relic-bearer")
-    return `${enemy.name} подчинил мировую реликвию и стал опаснее обычных чемпионов.`;
-  return `${enemy.name} продолжил школу наставника и превзошёл прежнее поколение.`;
-}
-
 function mentorCandidates(
   enemy: EnemyProfile,
   fighters: EnemyProfile[],
@@ -647,46 +596,6 @@ export function normalizeNpcLifeWorldState(
     value && typeof value === "object"
       ? (value as Partial<NpcLifeWorldState>)
       : {};
-  const futureBosses = Array.isArray(source.futureBosses)
-    ? source.futureBosses
-        .filter((entry): entry is FutureBossRecord =>
-          Boolean(entry?.id && entry.fighterId),
-        )
-        .map((entry) => ({
-          ...entry,
-          status: (["dormant", "available", "defeated"].includes(entry.status)
-            ? entry.status
-            : "dormant") as FutureBossRecord["status"],
-          powerLevel: safeInteger(entry.powerLevel, 1, 1),
-          earliestAppearanceDay: safeInteger(
-            entry.earliestAppearanceDay,
-            day,
-            1,
-          ),
-        }))
-        .reduce<FutureBossRecord[]>((records, entry) => {
-          const duplicateIndex = records.findIndex(
-            (candidate) =>
-              candidate.id === entry.id ||
-              candidate.fighterId === entry.fighterId,
-          );
-          if (duplicateIndex < 0) {
-            records.push(entry);
-            return records;
-          }
-          const statusRank: Record<FutureBossRecord["status"], number> = {
-            dormant: 0,
-            available: 1,
-            defeated: 2,
-          };
-          if (
-            statusRank[entry.status] >=
-            statusRank[records[duplicateIndex].status]
-          )
-            records[duplicateIndex] = entry;
-          return records;
-        }, [])
-    : [];
   const state: NpcLifeWorldState = {
     version: 1,
     season: safeInteger(source.season, 1, 1),
@@ -701,9 +610,16 @@ export function normalizeNpcLifeWorldState(
             ...entry,
             memberIds: [...new Set(entry.memberIds ?? [])],
             prestige: safeInteger(entry.prestige, 0),
+            alumni: entry.alumni
+              ? {
+                  count: safeInteger(entry.alumni.count, 0),
+                  championships: safeInteger(entry.alumni.championships, 0),
+                  crowns: safeInteger(entry.alumni.crowns, 0),
+                }
+              : undefined,
           }))
       : [],
-    futureBosses,
+    futureBosses: [],
   };
   const rawProfiles =
     source.profiles && typeof source.profiles === "object"
@@ -722,13 +638,12 @@ export function normalizeNpcLifeWorldState(
       : "active";
     state.profiles[id] = {
       fighterId: id,
-      career,
+      career: career === "future-boss" ? "active" : career,
       nickname: raw.nickname,
       nicknameGrantedDay: raw.nicknameGrantedDay,
       dynastyId: raw.dynastyId,
       revengeTargetId: raw.revengeTargetId,
       desiredSetId: raw.desiredSetId,
-      futureBossId: raw.futureBossId,
       lastPlanDay: raw.lastPlanDay,
       seasonsActive: safeInteger(raw.seasonsActive, 0),
     };
@@ -748,34 +663,16 @@ export function normalizeNpcLifeWorldState(
             : "active";
     state.profiles[fighter.id] = {
       fighterId: fighter.id,
-      career,
+      career: career === "future-boss" ? "active" : career,
       nickname: raw?.nickname,
       nicknameGrantedDay: raw?.nicknameGrantedDay,
       dynastyId: raw?.dynastyId,
       revengeTargetId: raw?.revengeTargetId,
       desiredSetId: raw?.desiredSetId,
-      futureBossId: raw?.futureBossId,
       lastPlanDay: raw?.lastPlanDay,
       seasonsActive: safeInteger(raw?.seasonsActive, 0),
     };
   });
-  state.futureBosses
-    .filter((boss) => boss.status === "defeated")
-    .forEach((boss) => {
-      const profile = state.profiles[boss.fighterId];
-      if (
-        !profile ||
-        (profile.futureBossId !== boss.id && profile.career !== "future-boss")
-      )
-        return;
-      profile.futureBossId = undefined;
-      if (profile.career === "future-boss")
-        profile.career = fighters.find(
-          (fighter) => fighter.id === boss.fighterId,
-        )?.legendSinceDay
-          ? "legend"
-          : "active";
-    });
   return state;
 }
 
@@ -1073,15 +970,11 @@ export function npcReferenceRetentionIds(
   });
   Object.values(state.profiles).forEach((profile) => {
     if (profile.revengeTargetId) retained.add(profile.revengeTargetId);
-    if (profile.career === "future-boss") retained.add(profile.fighterId);
   });
   state.dynasties.forEach((dynasty) => {
     retained.add(dynasty.founderId);
     dynasty.memberIds.forEach((id) => retained.add(id));
   });
-  state.futureBosses
-    .filter((boss) => boss.status !== "defeated")
-    .forEach((boss) => retained.add(boss.fighterId));
   fighters.forEach((fighter) => {
     Object.values(fighter.relationships ?? {})
       .filter(
@@ -1167,9 +1060,6 @@ export function cleanupNpcLifeReferences(
   const protectedProfileIds = new Set([
     ...fighterIds,
     ...mentorFighterIds,
-    ...state.futureBosses
-      .filter((boss) => boss.status !== "defeated")
-      .map((boss) => boss.fighterId),
     ...state.dynasties.flatMap((dynasty) => dynasty.memberIds),
   ]);
   const beforeProfiles = Object.keys(state.profiles).length;
@@ -1186,19 +1076,6 @@ export function cleanupNpcLifeReferences(
   };
 }
 
-export function refreshFutureBossAvailability(
-  state: NpcLifeWorldState,
-  day: number,
-): FutureBossRecord[] {
-  const unlocked: FutureBossRecord[] = [];
-  state.futureBosses.forEach((boss) => {
-    if (boss.status !== "dormant" || day < boss.earliestAppearanceDay) return;
-    boss.status = "available";
-    unlocked.push(boss);
-  });
-  return unlocked;
-}
-
 export function advanceNpcCareerSeason(
   fighters: EnemyProfile[],
   mentors: MentorRecord[],
@@ -1212,9 +1089,7 @@ export function advanceNpcCareerSeason(
     transitions: [],
     mentorsCreated: [],
     dynastiesCreated: [],
-    futureBossesCreated: [],
   };
-  refreshFutureBossAvailability(state, context.day);
   if (context.day - state.seasonStartedDay < seasonLength) return result;
   state.season += 1;
   state.seasonStartedDay = context.day;
@@ -1331,51 +1206,6 @@ export function advanceNpcCareerSeason(
       dynastyId: dynasty.id,
       description: `${fighter.name} завершил карьеру и основал ${dynasty.name}.`,
     });
-  });
-  fighters
-    .filter((fighter) => fighter.alive)
-    .forEach((fighter) => {
-      const profile = profileFor(state, fighter.id);
-      if (profile.career === "mentor") return;
-      const archetype = futureBossArchetype(fighter, profile);
-      if (
-        !archetype ||
-        state.futureBosses.some((boss) => boss.fighterId === fighter.id)
-      )
-        return;
-      const boss: FutureBossRecord = {
-        id: futureBossIdFor(fighter, archetype),
-        fighterId: fighter.id,
-        name: profile.nickname
-          ? `${fighter.name}, ${profile.nickname}`
-          : fighter.name,
-        classId: fighter.classId,
-        archetype,
-        reason: futureBossReason(fighter, archetype),
-        createdDay: context.day,
-        earliestAppearanceDay: context.day + 14,
-        powerLevel: Math.max(
-          fighter.level,
-          Math.round(
-            fighter.level + fighter.tournamentWins / 3 + fighter.kills / 2,
-          ),
-        ),
-        status: "dormant",
-      };
-      state.futureBosses.push(boss);
-      profile.career = "future-boss";
-      profile.futureBossId = boss.id;
-      result.futureBossesCreated.push(boss);
-      result.transitions.push({
-        kind: "marked-future-boss",
-        fighterId: fighter.id,
-        futureBossId: boss.id,
-        description: boss.reason,
-      });
-    });
-  state.futureBosses.forEach((boss) => {
-    if (boss.status === "dormant" && context.day >= boss.earliestAppearanceDay)
-      boss.status = "available";
   });
   evolveNpcRelationships(fighters, state, context.day);
   cleanupNpcLifeReferences(fighters, mentors, state);

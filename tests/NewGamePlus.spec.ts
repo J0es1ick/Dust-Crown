@@ -401,7 +401,20 @@ describe("Новая летопись", () => {
       studentIds: students.map((student) => student.id),
       legacy: "Основал школу после побед на арене.",
       competes: true,
+      dynastyId: "school-era",
     }];
+    const deceasedStudent = game.save.enemies[9];
+    deceasedStudent.alive = false;
+    deceasedStudent.tournamentWins = 12;
+    students.forEach((student, index) => { student.tournamentWins = index + 1; });
+    game.save.eliteCrownWins[students[0].id] = 2;
+    game.save.npcLife!.dynasties = [{
+      id: "school-era", name: "Школа эпохи", founderId: mentorFighter.id,
+      founderName: mentorFighter.name, factionId: mentorFighter.factionId!,
+      foundedDay: 1, prestige: 80,
+      memberIds: [mentorFighter.id, ...students.map((student) => student.id), deceasedStudent.id],
+    }];
+    const previousSchool = game.npcDynasties()[0];
     const options = transitionOptions(game);
     options.heirloomItemId = source.id;
 
@@ -424,6 +437,13 @@ describe("Новая летопись", () => {
     });
     expect(carriedMentor.competes).toBe(next.save.enemies.some((enemy) => enemy.id === mentorFighter.id));
     expect(next.save.mentors![0].legacy).toContain("пережила смену эпохи");
+    const carriedSchool = next.npcDynasties().find((school) => school.id === "school-era")!;
+    expect(carriedSchool.prestige).toBe(previousSchool.prestige);
+    expect(carriedSchool.historicalStudents).toBe(previousSchool.historicalStudents);
+    expect(carriedSchool.championships).toBe(previousSchool.championships);
+    expect(carriedSchool.crowns).toBe(previousSchool.crowns);
+    expect(WorldGame.restore(JSON.parse(JSON.stringify(next.save))).npcDynasties()
+      .find((school) => school.id === "school-era")!.prestige).toBe(previousSchool.prestige);
   });
 
   test.each(["mentor", "faction-founder"] as const)("школы и основатели роли %s переживают восстановление и три дня мира", (role) => {

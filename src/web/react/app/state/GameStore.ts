@@ -723,7 +723,9 @@ export class GameStore {
 
   private queueAvailableTutorials(): void {
     if (!this.game) return;
-    (["contracts", "equipment-legacy"] as const).forEach((id) => {
+    (
+      ["contracts", "forge", "equipment-legacy", "crown-league"] as const
+    ).forEach((id) => {
       if (this.game!.isFeatureUnlocked(id)) this.queueTutorial(id);
     });
     if (

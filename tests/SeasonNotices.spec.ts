@@ -67,7 +67,7 @@ describe("season change announcements", () => {
     expect(tracker.collect(imported)).toEqual([]);
   });
 
-  test("suppresses crown season notices before reaching the final arena", () => {
+  test("suppresses crown season notices until the league invitation", () => {
     const state = save();
     const tracker = new SeasonNoticeTracker();
     tracker.reset(state);
@@ -76,11 +76,15 @@ describe("season change announcements", () => {
     state.hero.highestArena = ARENAS.length - 1;
     expect(tracker.collect(state)).toEqual([]);
     state.crownSeason.number += 1;
+    expect(tracker.collect(state)).toEqual([]);
+    state.unlockedFeatureIds.push("crown-league");
+    state.crownSeason.number += 1;
     expect(tracker.collect(state)).toMatchObject([{ kind: "crown" }]);
   });
 
   test("compares added, removed and unchanged crown rules without retaining mutable arrays", () => {
     const state = save();
+    state.unlockedFeatureIds.push("crown-league");
     state.hero.highestArena = ARENAS.length - 1;
     state.crownSeason.ruleIds = ["open-floor", "dry-ring"];
     const tracker = new SeasonNoticeTracker();
@@ -99,6 +103,7 @@ describe("season change announcements", () => {
 
   test("emits independent world and crown notices when both seasons change on the same day", () => {
     const state = save();
+    state.unlockedFeatureIds.push("crown-league");
     state.hero.highestArena = ARENAS.length - 1;
     const tracker = new SeasonNoticeTracker();
     tracker.reset(state);

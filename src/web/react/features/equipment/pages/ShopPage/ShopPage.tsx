@@ -7,6 +7,7 @@ import "../../styles/components.css";
 
 function ShopSupplies() {
   const { game, act, notify } = useGame();
+  if (!game.isFeatureUnlocked("forge")) return null;
   const hero = game.save.hero;
   const price = game.temperingMarkPrice();
   const buy = (quantity: number) => {
@@ -94,8 +95,10 @@ export function ShopPage() {
     <section className="page active equipment-page" id="page-shop">
       <PageHeading eyebrow="ТОРГОВЫЙ ДОМ НИЖНЕГО ГОРОДА" title="Лавка Ионы">
         <p id="shop-description">
-          Здесь можно подобрать снаряжение и купить печати закалки. Покупки не
-          продвигают день мира.
+          {game.isFeatureUnlocked("forge")
+            ? "Здесь можно подобрать снаряжение и купить печати закалки."
+            : "Здесь можно подобрать снаряжение под класс и уровень героя."}{" "}
+          Покупки не продвигают день мира.
         </p>
       </PageHeading>
       <section className="shop-intro paper-panel" id="shop-intro">

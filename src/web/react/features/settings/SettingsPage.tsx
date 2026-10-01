@@ -187,14 +187,16 @@ function HeroSettings() {
           act((world) => world.setAutoSelectSkills(enabled))
         }
       />
-      <Toggle
-        title="Автоматически рассчитывать защиту титула"
-        description="В пятёрке элиты: если в день вызова выбрать другое занятие, защита пройдёт в фоне. Поражение может стоить места."
-        checked={hero.autoResolveLegendChallenges}
-        onChange={(enabled) =>
-          act((world) => world.setAutoResolveLegendChallenges(enabled))
-        }
-      />
+      {game.isFeatureUnlocked("crown-league") && (
+        <Toggle
+          title="Автоматически рассчитывать защиту титула"
+          description="В пятёрке элиты: если в день вызова выбрать другое занятие, защита пройдёт в фоне. Поражение может стоить места."
+          checked={hero.autoResolveLegendChallenges}
+          onChange={(enabled) =>
+            act((world) => world.setAutoResolveLegendChallenges(enabled))
+          }
+        />
+      )}
     </section>
   );
 }

@@ -66,6 +66,7 @@ describe("React equipment updates", () => {
     document.body.append(container);
     root = createRoot(container);
     const game = WorldGame.create("Проверка", "Knight", 914);
+    game.save.hero.arenaWins[0] = 1;
     game.save.hero.temperingMarks = 50;
     mockContext = {
       game,
@@ -170,7 +171,7 @@ describe("React equipment updates", () => {
     click(control);
 
     expect(dom.window.confirm).toHaveBeenCalledWith(
-      "Продать 1 неиспользуемых предметов за 90 ¤? Надетые вещи, регалии короны и мировые реликвии останутся у героя.",
+      "Продать 1 неиспользуемых предметов за 90 ¤? Надетые и защищённые вещи останутся у героя.",
     );
     expect(
       mockContext.game.save.hero.inventory.some(

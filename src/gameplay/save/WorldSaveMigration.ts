@@ -678,9 +678,9 @@ export function normalizeWorldSave(save: GameSave): GameSave {
     });
   const knownFeatures = new Set<WorldFeatureId>(WORLD_FEATURE_IDS);
   const knownTutorials = new Set<ContextualTutorialId>([
-    "contracts",
-    "equipment-legacy",
+    ...WORLD_FEATURE_IDS,
     "adaptation",
+    "world",
   ]);
   save.seenContextualTutorialIds = [
     ...new Set(save.seenContextualTutorialIds),

@@ -1,4 +1,4 @@
-import { ARENAS } from "../../../../../catalogs/WorldCatalog";
+import { worldFeatureAvailability } from "../../../../../gameplay/world/WorldFeatureProgression";
 import { TOURNAMENT_RULES } from "../../../../../catalogs/WorldExpansionCatalog";
 import {
   worldSeasonRule,
@@ -150,7 +150,7 @@ export class SeasonNoticeTracker {
     }
     if (
       next.crown.number > previous.crown.number &&
-      save.hero.highestArena >= ARENAS.length - 1
+      worldFeatureAvailability(save, "crown-league").unlocked
     ) {
       const before = new Set(previous.crown.ruleIds);
       const after = new Set(next.crown.ruleIds);

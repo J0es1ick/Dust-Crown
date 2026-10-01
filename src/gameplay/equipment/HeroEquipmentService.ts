@@ -85,6 +85,7 @@ export class HeroEquipmentService {
   ) {}
 
   public setLootTarget(target?: LootTarget): void {
+    this.hooks.requireFeature("equipment-legacy");
     if (!target) {
       this.save.lootTarget = undefined;
       this.save.lootPity = undefined;
@@ -122,6 +123,7 @@ export class HeroEquipmentService {
     itemId: string,
     request: Omit<ReforgeRequest, "attempt">,
   ): ReforgeResult {
+    this.hooks.requireFeature("forge");
     const index = this.save.hero.inventory.findIndex(
       (item) => item.id === itemId,
     );
@@ -658,6 +660,7 @@ export class HeroEquipmentService {
   }
 
   public upgradeItem(itemId: string): EquipmentItem {
+    this.hooks.requireFeature("forge");
     const item = this.save.hero.inventory.find(
       (candidate) => candidate.id === itemId,
     );

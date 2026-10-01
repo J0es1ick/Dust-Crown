@@ -61,7 +61,9 @@ export const WORLD_PAGE_FEATURE: Readonly<
   Partial<Record<WorldPageId, WorldFeatureId>>
 > = {
   contracts: "contracts",
+  forge: "forge",
   legacy: "equipment-legacy",
+  elite: "crown-league",
 };
 
 export function isWorldPageAvailable(

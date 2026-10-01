@@ -20,6 +20,7 @@ import {
   normalizeNpcLifeWorldState,
 } from "../world/NpcLifeSimulation";
 import { StructuredWorldEventPayload } from "../world/WorldEvents";
+import { npcDynasties } from "../world/WorldQueries";
 import {
   buildLegacyArchive,
   describeLegacyArchiveInfluence,
@@ -209,20 +210,34 @@ export function beginNewChronicle<T>(
   const survivingSchools = new Set(
     eraMentors.map((mentor) => mentor.dynastyId).filter(Boolean),
   );
+  const schoolStandings = new Map(
+    npcDynasties(save).map((school) => [school.id, school]),
+  );
   nextSave.npcLife!.dynasties = (save.npcLife?.dynasties ?? [])
     .filter((dynasty) => survivingSchools.has(dynasty.id))
-    .map((dynasty) => ({
-      ...dynasty,
-      foundedDay: 1,
-      memberIds: [
-        ...new Set([
-          dynasty.founderId,
-          ...eraMentors
+    .map((dynasty) => {
+      const standing = schoolStandings.get(dynasty.id)!;
+      const students = [
+        ...new Set(
+          eraMentors
             .filter((mentor) => mentor.dynastyId === dynasty.id)
             .flatMap((mentor) => mentor.studentIds),
-        ]),
-      ],
-    }));
+        ),
+      ].filter((id) => id !== dynasty.founderId);
+      const championships = nextSave.enemies
+        .filter((enemy) => students.includes(enemy.id))
+        .reduce((total, enemy) => total + enemy.tournamentWins, 0);
+      return {
+        ...dynasty,
+        alumni: {
+          count: Math.max(0, standing.historicalStudents - students.length),
+          championships: Math.max(0, standing.championships - championships),
+          crowns: standing.crowns,
+        },
+        foundedDay: 1,
+        memberIds: [dynasty.founderId, ...students],
+      };
+    });
   eraMentors.forEach((mentor) => {
     if (
       mentor.dynastyId &&

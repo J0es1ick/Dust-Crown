@@ -3,6 +3,7 @@ import { css } from "../../../../shared/ui/common";
 
 export function NewChronicleStatus() {
   const { game, openDialog } = useGame();
+  if (!game.isFeatureUnlocked("crown-league")) return null;
   const status = game.newGamePlusStatus();
   const completed = status.requirements.filter(
     (requirement) => requirement.met,

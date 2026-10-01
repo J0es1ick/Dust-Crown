@@ -62,7 +62,7 @@ describe("Living world integration", () => {
     expect(game.save.factionControl!.lastShiftDay).toBe(14);
   });
 
-  test("a future boss awakens, survives saving and grants a single mythic reward when defeated", () => {
+  test("an old active boss encounter remains finishable after the mechanic is removed", () => {
     const game = world();
     strengthenHero(game);
     const source = game.save.enemies[0];
@@ -71,18 +71,21 @@ describe("Living world integration", () => {
       archetype: "nemesis", reason: "Помнит старое поражение", createdDay: 1,
       earliestAppearanceDay: 2, powerLevel: 5, status: "dormant",
     });
-    game.train();
-    expect(game.availableFutureBosses().map((boss) => boss.id)).toContain("future-test");
-    game.beginFutureBossFight("future-test");
+    game.save.pendingFactionHunterId = source.id;
+    const pending = game.beginFactionHunterFight();
+    pending.activityId = "future-test";
+    pending.context = { ...pending.context, encounterType: "future-boss", futureBossId: "future-test" };
     const restored = WorldGame.restore(JSON.parse(JSON.stringify(game.save)));
     expect(restored.currentPendingBattle()?.kind).toBe("world-encounter");
     const result = restored.runPendingBattleAutomatically() as BattleReport;
     expect(result.heroWon).toBe(true);
     expect(result.rewards.item?.rarity).toBe("mythic");
     expect(result.rewards.temperingMarks).toBe(2);
-    expect(restored.save.npcLife!.futureBosses.find((boss) => boss.id === "future-test")?.status).toBe("defeated");
+    expect(restored.save.npcLife!.futureBosses).toEqual([]);
     expect(restored.save.hero.bossWins).toBe(1);
-    expect(() => restored.beginFutureBossFight("future-test")).toThrow("уже побеждён");
+    const rewards = restored.save.hero.gold;
+    restored.runPendingBattleAutomatically();
+    expect(restored.save.hero.gold).toBe(rewards);
   });
 
   test("a faction hunter resolves as a duel without adding arena victories", () => {

@@ -53,7 +53,6 @@ import {
   recordNpcAlliance,
   recordNpcEncounter,
   recordNpcPlanOutcome,
-  refreshFutureBossAvailability,
   refreshNpcIdentity,
 } from "./NpcLifeSimulation";
 import { StructuredWorldEventPayload } from "./WorldEvents";
@@ -1219,20 +1218,6 @@ export class NpcSimulationService {
       },
     );
     this.hooks.syncCrownSet();
-  }
-
-  public syncFutureBosses(): void {
-    const life = (this.save.npcLife = normalizeNpcLifeWorldState(
-      this.save.npcLife,
-      this.save.enemies,
-      this.save.worldDay,
-    ));
-    refreshFutureBossAvailability(life, this.save.worldDay).forEach((boss) => {
-      this.hooks.event(
-        "promotion",
-        `${boss.name} появился среди особых противников. ${boss.reason}`,
-      );
-    });
   }
 
   public syncFactionHunter(): void {

@@ -10,6 +10,7 @@ import { DialogStack } from "../dialogs/DialogStack";
 import { PageRouter } from "../routing/PageRouter";
 import {
   WORLD_PAGE_IDS,
+  WORLD_PAGE_NAV_GROUP,
   isWorldPageAvailable,
 } from "../routing/WorldPageCatalog";
 import { pageFromHash } from "../routing/UiRuntime";
@@ -49,11 +50,17 @@ export function WorldShell() {
   useEffect(() => {
     if (dialogs.length) return;
     const timer = window.setTimeout(() => {
-      if (game.pendingNarrativeEvent()) store.openDialog({ kind: "narrative" });
+      if (
+        WORLD_PAGE_NAV_GROUP[page] === "world" &&
+        !game.hasSeenTutorial("world")
+      )
+        store.openDialog({ kind: "tutorial", id: "world" });
+      else if (game.pendingNarrativeEvent())
+        store.openDialog({ kind: "narrative" });
       else store.presentNextTutorial();
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [game, revision, dialogs.length, store]);
+  }, [game, revision, page, dialogs.length, store]);
 
   return (
     <>

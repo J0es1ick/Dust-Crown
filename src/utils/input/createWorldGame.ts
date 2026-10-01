@@ -533,10 +533,13 @@ async function inventoryMenu(game: WorldGame): Promise<void> {
 }
 
 async function forgeAndLootMenu(game: WorldGame): Promise<void> {
+  if (!game.isFeatureUnlocked("forge")) return;
+  const legacy = game.isFeatureUnlocked("equipment-legacy");
   console.log(
-    "\n1. Выбрать цель добычи   2. Сбросить цель   3. Перековать свойство   4. Закалить предмет",
+    `\n${legacy ? "1. Выбрать цель добычи   2. Сбросить цель   " : ""}3. Перековать свойство   4. Закалить предмет`,
   );
   const action = (await readAnswer("Действие: ")).trim();
+  if ((action === "1" || action === "2") && !legacy) return;
   if (action === "1") {
     const mode = await readAnswer("1. Целевой слот   2. Целевой комплект: ");
     if (mode.trim() === "1") {
@@ -1014,6 +1017,7 @@ function printLeaderboards(game: WorldGame): void {
         `${index + 1}. ${entry.name}${entry.isHero ? " [ВЫ]" : ""} · ${CLASS_DEFINITIONS[entry.classId].name} · ур. ${entry.level} · рейтинг ${entry.rating}`,
       ),
     );
+  if (!game.isFeatureUnlocked("crown-league")) return;
   console.log("\nЭлита:");
   game
     .eliteLeaderboard()
@@ -1042,11 +1046,23 @@ export async function createWorldGame(
     console.log(
       "\n1. Тренировка   2. Дуэли и боссы   3. Маршрут данжа   4. Турниры   5. Инвентарь",
     );
+    const forge = game.isFeatureUnlocked("forge");
+    const crown = game.isFeatureUnlocked("crown-league");
     console.log(
-      "6. Кузня и целевая добыча   7. История, фракции и контракты   8. Лига короны и легенды",
+      [
+        ...(forge
+          ? [
+              game.isFeatureUnlocked("equipment-legacy")
+                ? "6. Кузня и целевая добыча"
+                : "6. Кузня",
+            ]
+          : []),
+        "7. История, фракции и контракты",
+        ...(crown ? ["8. Лига короны и легенды"] : []),
+      ].join("   "),
     );
     console.log(
-      "9. Рейтинги   10. Новая игра+   11. События мира   12. Тактика, навыки и класс   13. Экспорт/импорт   0. Сохранить и выйти",
+      `9. Рейтинги   ${crown ? "10. Новая игра+   " : ""}11. События мира   12. Тактика, навыки и класс   13. Экспорт/импорт   0. Сохранить и выйти`,
     );
     const action = (await readAnswer("Действие: ")).trim();
     try {
@@ -1057,11 +1073,12 @@ export async function createWorldGame(
       else if (action === "3") await playDungeon(game, persist);
       else if (action === "4") await tournamentsMenu(game, persist);
       else if (action === "5") await inventoryMenu(game);
-      else if (action === "6") await forgeAndLootMenu(game);
+      else if (action === "6" && forge) await forgeAndLootMenu(game);
       else if (action === "7") await storyAndFactionsMenu(game);
-      else if (action === "8") await endgameMenu(game, persist);
+      else if (action === "8" && crown) await endgameMenu(game, persist);
       else if (action === "9") printLeaderboards(game);
-      else if (action === "10") game = await newGamePlusMenu(game, persist);
+      else if (action === "10" && crown)
+        game = await newGamePlusMenu(game, persist);
       else if (action === "11")
         game.save.events
           .slice(0, 30)

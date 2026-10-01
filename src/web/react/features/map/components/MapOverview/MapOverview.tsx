@@ -66,9 +66,9 @@ export function NextGoalCard() {
   const wins = hero.arenaWins[hero.highestArena] ?? 0;
   const epoch = game.newGamePlusStatus();
   const completed = epoch.requirements.filter((entry) => entry.met).length;
-  const finalArenaWon = epoch.requirements.find(
-    (entry) => entry.id === "final-arena",
-  )?.met;
+  const finalArenaWon =
+    game.isFeatureUnlocked("crown-league") &&
+    epoch.requirements.find((entry) => entry.id === "final-arena")?.met;
   const registeredDay = game.registeredTournamentDay(arena.id);
   const availability = game.availability(arena);
   const dueArena = ARENAS.find(
@@ -108,6 +108,14 @@ export function NextGoalCard() {
     onAction = epoch.unlocked
       ? () => openDialog({ kind: "new-chronicle" })
       : () => navigate("map", "endgame-section");
+  }
+  if (
+    !game.isFeatureUnlocked("crown-league") &&
+    (hero.arenaWins[ARENAS.length - 1] ?? 0) > 0
+  ) {
+    title = "Первое место в мировом рейтинге";
+    detail = `Сейчас вы на месте #${game.heroRank() ?? "—"}. Чемпионства на старших аренах повышают рейтинг: продолжайте побеждать в турнирах.`;
+    action = "К турнирам";
   }
   if (dueArena || crownDue || game.save.pendingEliteChallengeId) {
     title = game.save.pendingEliteChallengeId

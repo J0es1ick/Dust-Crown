@@ -14,7 +14,6 @@ import {
   recordNpcAlliance,
   recordNpcEncounter,
   evolveNpcRelationships,
-  refreshFutureBossAvailability,
   refreshNpcIdentity,
 } from "../src/gameplay/world/NpcLifeSimulation";
 import { RandomSource, SeededRandom } from "../src/gameplay/core/RandomSource";
@@ -351,7 +350,7 @@ describe("NpcLifeSimulation", () => {
     expect(result.transitions.map((transition) => transition.kind)).toEqual(expect.arrayContaining(["became-legend", "became-mentor"]));
   });
 
-  test("awards an earned nickname and preserves a nemesis as a future boss", () => {
+  test("keeps rivals in ordinary careers without creating separate bosses", () => {
     const [fighter, rival] = fighters(2);
     fighter.kills = 12;
     fighter.relationships = {
@@ -359,56 +358,16 @@ describe("NpcLifeSimulation", () => {
     };
     fighter.joinedDay = 50;
     const state = createNpcLifeWorldState(1);
-
     expect(refreshNpcIdentity(state, fighter, 60)).toBe("Несущий пепел");
-    const result = advanceNpcCareerSeason([fighter, rival], [], state, {
-      day: 60,
-      eliteIds: [],
-      seasonLength: 28,
-      random: fixedRandom,
-    });
-
-    expect(result.futureBossesCreated).toHaveLength(1);
-    expect(result.futureBossesCreated[0]).toMatchObject({ fighterId: fighter.id, archetype: "nemesis", status: "dormant" });
-    expect(state.profiles[fighter.id].career).toBe("future-boss");
-    expect(npcReferenceRetentionIds([fighter, rival], [], state)).toContain(fighter.id);
-    expect(refreshFutureBossAvailability(state, 73)).toHaveLength(0);
-    expect(refreshFutureBossAvailability(state, 74)).toHaveLength(1);
-    expect(state.futureBosses[0].status).toBe("available");
-  });
-
-  test("does not recreate a defeated future boss in a later season", () => {
-    const [fighter, rival] = fighters(2);
-    fighter.kills = 12;
-    fighter.relationships = {
-      [rival.id]: { fighterId: rival.id, kind: "rival", intensity: 82, lastChangedDay: 50 },
-    };
-    fighter.joinedDay = 50;
-    const state = createNpcLifeWorldState(1);
     advanceNpcCareerSeason([fighter, rival], [], state, {
-      day: 60,
-      eliteIds: [],
-      seasonLength: 28,
-      random: fixedRandom,
+      day: 60, eliteIds: [], seasonLength: 28, random: fixedRandom,
     });
-    state.futureBosses[0].status = "defeated";
-
-    const normalized = normalizeNpcLifeWorldState(state, [fighter, rival], 88);
-    const result = advanceNpcCareerSeason([fighter, rival], [], normalized, {
-      day: 88,
-      eliteIds: [],
-      seasonLength: 28,
-      random: fixedRandom,
-    });
-
-    expect(normalized.futureBosses).toHaveLength(1);
-    expect(normalized.futureBosses[0].status).toBe("defeated");
-    expect(normalized.profiles[fighter.id].futureBossId).toBeUndefined();
-    expect(normalized.profiles[fighter.id].career).toBe("active");
-    expect(result.futureBossesCreated).toHaveLength(0);
+    expect(state.futureBosses).toEqual([]);
+    expect(state.profiles[fighter.id].career).toBe("active");
+    expect(fighter.relationships[rival.id].kind).toBe("rival");
   });
 
-  test("collapses duplicate persisted future bosses and preserves their terminal state", () => {
+  test("removes retired boss records without losing the fighter identity", () => {
     const [fighter] = fighters(1);
     const base = createNpcLifeWorldState(1);
     base.profiles[fighter.id] = {
@@ -432,8 +391,7 @@ describe("NpcLifeSimulation", () => {
 
     const normalized = normalizeNpcLifeWorldState(base, [fighter], 60);
 
-    expect(normalized.futureBosses).toHaveLength(1);
-    expect(normalized.futureBosses[0]).toMatchObject({ fighterId: fighter.id, status: "defeated" });
+    expect(normalized.futureBosses).toEqual([]);
     expect(normalized.profiles[fighter.id]).toMatchObject({ career: "active" });
     expect(normalized.profiles[fighter.id].futureBossId).toBeUndefined();
   });

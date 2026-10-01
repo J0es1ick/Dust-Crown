@@ -17,15 +17,16 @@ describe("world service determinism", () => {
       "698e333e86b0fb731e6f09f238cd1c3bfdf238ba8bf49074b09c1bc73e857d76",
     );
     game.save.hero.temperingMarks = 10;
+    game.save.hero.arenaWins[1] = 1;
     game.upgradeItem(game.save.hero.inventory[0].id);
     game.equipBest("set");
     game.setLootTarget({ slot: "weapon" });
     expect(hash()).toBe(
-      "2ef499dfd0c14bbc6ea5880dedaf09dacb1667dcdbd45ada6e305eee0b32df62",
+      "ed7b1402cdb7db5a0fe2a9f8bc8f8ddf1e9f3cbf348534f8cfd065ffd75939ba",
     );
     game.duel();
     expect(hash()).toBe(
-      "8679bc4c857ef8628e6f4f05303216ec06cab74f054b082294a4b2c2685ca867",
+      "7b9e9c669a30b951e8fd743bea18271cccb0bd6d970a425ad76610916ae609a3",
     );
     game.save.hero.level = 8;
     game.save.hero.highestArena = 1;
@@ -33,18 +34,18 @@ describe("world service determinism", () => {
     game.advanceExpeditionNode(game.reachableExpeditionNodes()[0].id);
     if (game.save.activeExpedition) game.retreatExpedition();
     expect(hash()).toBe(
-      "51e55ab445aaf3a05636e8502543f8cc93ee19d2ee96df954e7fa4887f90a027",
+      "66fd1813ec550671c4f49c51ab13d42b5819f766d0b80afd9329e9ad5204d018",
     );
     game.save.lastSimulatedAt = now - 14 * 600000;
     game.simulateElapsed(now);
     expect(hash()).toBe(
-      "2fa93daeae28e0ebe25d83b980b00481d1d5ee43118da30709669798c053979e",
+      "f550cc8b5757b198a770d3228032c88bdf8b2982df7812296beb07f68e33eada",
     );
     game.save.worldDay = game.save.worldSeason!.endsDay;
     game.save.lastSimulatedAt = now - 600000;
     game.simulateElapsed(now);
     expect(hash()).toBe(
-      "ab168fee5548445c32edd92c75bc9398e40dc137f0558b415416b650c5bd7627",
+      "c57469538e188db4f50376bf33d19dc73e1e85467f775f3afae715518c4b9fbf",
     );
     game.save.hero.highestArena = ARENAS.length - 1;
     game.save.hero.arenaWins[ARENAS.length - 1] = 1;
@@ -70,7 +71,7 @@ describe("world service determinism", () => {
     );
     expect(
       createHash("sha256").update(JSON.stringify(next.save)).digest("hex"),
-    ).toBe("d8607e98db81235fd3ae983e5b605ca8ab4a80c8b62c173bbff7307fe818dfd7");
+    ).toBe("88efb531293c9daf02b1cfbbb0f626976252e458414a5df1ba71a9b060b1d892");
   });
 
   test.each([

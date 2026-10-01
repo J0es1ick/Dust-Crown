@@ -158,7 +158,13 @@ export function TutorialDialog({
             ×
           </button>
         </header>
-        <div className="react-tutorial-content" key={`${id}-${index}`}>
+        <div
+          className="react-tutorial-content"
+          key={`${id}-${index}`}
+          tabIndex={0}
+          role="region"
+          aria-labelledby="tutorial-title"
+        >
           <h2 id="tutorial-title">{step?.title ?? "Пока всё изучено"}</h2>
           <p id="tutorial-copy">
             {step?.copy ??

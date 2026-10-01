@@ -31,6 +31,7 @@ describe("equipment operations", () => {
 
   test("direct upgrade quotes preserve every enhancement cost and the forge boon", () => {
     const game = WorldGame.create("Кузнец", "Knight", 42_202);
+    game.save.hero.arenaWins[0] = 1;
     const item = game.save.hero.inventory[0];
     const quote = (enhancement: number | undefined, expected: number) => {
       item.enhancement = enhancement;
@@ -128,6 +129,7 @@ describe("equipment operations", () => {
 
   test("upgrading a world relic keeps the inventory item and canonical registry copy identical", () => {
     const game = WorldGame.create("Кузнец реликвий", "Knight", 42_209);
+    game.save.hero.arenaWins[0] = 1;
     const source = createItem(30, { classId: "Knight", slot: "weapon", rarity: "legendary" });
     const record = createWorldRelicRecord("upgraded-world-relic", source, "hero", game.save.hero.name, game.save.worldDay);
     game.save.worldRelics = [record];
@@ -187,6 +189,7 @@ describe("equipment operations", () => {
 
   test("single upgrades and sales reuse the item found during their ownership check", () => {
     const game = WorldGame.create("Мастер", "Knight", 42_207);
+    game.save.hero.arenaWins[0] = 1;
     const item = extraItem(game, "single-action");
     game.save.hero.inventory.push(item);
     game.save.hero.temperingMarks = 1;

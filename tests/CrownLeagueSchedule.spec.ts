@@ -65,7 +65,7 @@ describe("Crown League calendar", () => {
   test("still requires qualification and advance registration", () => {
     const unqualified = WorldGame.create("Новичок", "Knight", 1_001);
     expect(unqualified.crownLeagueRegistrationAvailability().unlocked).toBe(false);
-    expect(() => unqualified.registerCrownLeague()).toThrow("Сначала станьте чемпионом");
+    expect(() => unqualified.registerCrownLeague()).toThrow("первое место");
 
     const game = qualifiedGame(15);
     expect(game.crownLeagueAvailability()).toMatchObject({ unlocked: false });

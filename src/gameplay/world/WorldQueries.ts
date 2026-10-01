@@ -1,6 +1,5 @@
 import { FACTIONS } from "../../catalogs/WorldExpansionCatalog";
 import type {
-  ActivityAvailability,
   GameSave,
   MentorRecord,
   NpcGoal,
@@ -11,7 +10,7 @@ import { NARRATIVE_EVENTS } from "./NarrativeEvents";
 import { factionShopPrice } from "./FactionEconomy";
 import { factionCampaignViews, factionMentorAccess } from "./FactionCampaign";
 import { FACTION_CONTROL_EFFECTS, NPC_GOALS } from "./LivingWorld";
-import type { FutureBossRecord, NpcLifeProfile } from "./NpcLifeSimulation";
+import type { NpcLifeProfile } from "./NpcLifeSimulation";
 import type { WorldSeasonResult, WorldSeasonStanding } from "./WorldSeason";
 import { worldSeasonRule, worldSeasonStandings } from "./WorldSeason";
 import type { CrownSeasonResult, CrownSeasonState } from "./CrownSeason";
@@ -127,9 +126,41 @@ export function npcLifeProfile(
 }
 
 export function npcDynasties(save: GameSave) {
+  const fighters = new Map(
+    save.enemies.map((fighter) => [fighter.id, fighter]),
+  );
   return [...(save.npcLife?.dynasties ?? [])]
-    .sort((first, second) => second.prestige - first.prestige)
-    .map((dynasty) => ({ ...dynasty, memberIds: [...dynasty.memberIds] }));
+    .map((dynasty) => {
+      const memberIds = [...new Set(dynasty.memberIds)];
+      const students = memberIds
+        .filter((id) => id !== dynasty.founderId)
+        .map((id) => fighters.get(id))
+        .filter((fighter) => fighter !== undefined);
+      const championships = students.reduce(
+        (total, fighter) => total + fighter.tournamentWins,
+        dynasty.alumni?.championships ?? 0,
+      );
+      const crowns = students.reduce(
+        (total, fighter) => total + (save.eliteCrownWins[fighter.id] ?? 0),
+        dynasty.alumni?.crowns ?? 0,
+      );
+      const founderPrestige = dynasty.prestige;
+      const studentPrestige = championships * 4 + crowns * 15;
+      return {
+        ...dynasty,
+        memberIds,
+        founderPrestige,
+        studentPrestige,
+        championships,
+        crowns,
+        prestige: founderPrestige + studentPrestige,
+        activeStudents: students.filter((fighter) => fighter.alive).length,
+        historicalStudents:
+          memberIds.filter((id) => id !== dynasty.founderId).length +
+          (dynasty.alumni?.count ?? 0),
+      };
+    })
+    .sort((first, second) => second.prestige - first.prestige);
 }
 
 export function factionCampaigns(save: GameSave) {
@@ -150,40 +181,6 @@ export function factionMentors(save: GameSave) {
         ?.name ??
       `Школа: ${FACTIONS.find((faction) => faction.id === access.factionId)?.name ?? access.factionId}`,
   }));
-}
-
-export function availableFutureBosses(save: GameSave): FutureBossRecord[] {
-  return (save.npcLife?.futureBosses ?? [])
-    .filter((boss) => boss.status === "available")
-    .map((boss) => ({ ...boss }));
-}
-
-export function futureBossAvailability(
-  save: GameSave,
-  bossId: string,
-): ActivityAvailability {
-  const boss = save.npcLife?.futureBosses.find(
-    (candidate) => candidate.id === bossId,
-  );
-  if (!boss)
-    return {
-      unlocked: false,
-      reason: "Эта история ещё не породила особого противника.",
-    };
-  if (boss.status === "defeated")
-    return {
-      unlocked: false,
-      reason: "Этот противник уже побеждён и остался в летописи.",
-    };
-  if (boss.status === "dormant")
-    return {
-      unlocked: false,
-      reason: `След противника проявится не раньше дня ${boss.earliestAppearanceDay}.`,
-    };
-  return {
-    unlocked: true,
-    reason: `${boss.reason} Ожидаемая сила: уровень ${boss.powerLevel}.`,
-  };
 }
 
 export function npcGoal(goal: NpcGoal | undefined) {

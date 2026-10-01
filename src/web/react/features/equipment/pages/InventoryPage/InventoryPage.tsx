@@ -49,7 +49,7 @@ export function InventoryPage() {
   const sellUnused = () => {
     if (
       !window.confirm(
-        `Продать ${sellQuote.count} неиспользуемых предметов за ${sellQuote.value.toLocaleString("ru-RU")} ¤? Надетые вещи, регалии короны и мировые реликвии останутся у героя.`,
+        `Продать ${sellQuote.count} неиспользуемых предметов за ${sellQuote.value.toLocaleString("ru-RU")} ¤? Надетые и защищённые вещи останутся у героя.`,
       )
     )
       return;

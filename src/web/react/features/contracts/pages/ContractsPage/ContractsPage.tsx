@@ -8,7 +8,7 @@ import { FactionCards } from "../../components/FactionCards/FactionCards";
 import { ControlBoard } from "../../components/ControlBoard/ControlBoard";
 
 export function ContractsPage() {
-  const { game, act, notify } = useGame();
+  const { game, act, notify, openDialog } = useGame();
   const active = game.save.activeContract;
   const accept = (id: string, approach: "honor" | "profit") => {
     const contract = act((current) => current.acceptContract(id, approach));
@@ -32,6 +32,12 @@ export function ContractsPage() {
           Выполняйте дополнительные цели во время обычных занятий и открывайте
           привилегии фракций.
         </p>
+        <button
+          className="plain-button"
+          onClick={() => openDialog({ kind: "tutorial", id: "world" })}
+        >
+          Как устроен мир
+        </button>
       </PageHeading>
       <section className="active-contract paper-panel" id="active-contract">
         {active ? (

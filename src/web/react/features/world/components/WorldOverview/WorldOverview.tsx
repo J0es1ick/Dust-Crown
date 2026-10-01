@@ -59,15 +59,17 @@ export function WorldSeasonPanel() {
             </article>
           );
         })}
-        <article>
-          <small>Элита · чемпионат сезона</small>
-          <strong>{elite?.fighterName ?? "Лидер ещё не определён"}</strong>
-          <span>
-            {elite
-              ? `${elite.points} сезонных очков`
-              : "Результаты элитных боёв определят лидера"}
-          </span>
-        </article>
+        {game.isFeatureUnlocked("crown-league") && (
+          <article>
+            <small>Элита · чемпионат сезона</small>
+            <strong>{elite?.fighterName ?? "Лидер ещё не определён"}</strong>
+            <span>
+              {elite
+                ? `${elite.points} сезонных очков`
+                : "Результаты элитных боёв определят лидера"}
+            </span>
+          </article>
+        )}
       </div>
       <PagedList
         className="world-season-history"
@@ -77,7 +79,8 @@ export function WorldSeasonPanel() {
         render={(entry) => (
           <p>
             {entry.summary}
-            {entry.eliteChampion &&
+            {game.isFeatureUnlocked("crown-league") &&
+              entry.eliteChampion &&
               ` Чемпион элиты: ${entry.eliteChampion.fighterName} · ${entry.eliteChampion.points} очков.`}
           </p>
         )}

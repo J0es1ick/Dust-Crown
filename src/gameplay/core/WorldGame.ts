@@ -118,7 +118,6 @@ import {
 import {
   createNpcLifeWorldState,
   normalizeNpcLifeWorldState,
-  type FutureBossRecord,
   type NpcLifeProfile,
 } from "../world/NpcLifeSimulation";
 import { NpcSimulationService } from "../world/NpcSimulationService";
@@ -689,37 +688,6 @@ export class WorldGame {
         "Сначала выполните первое поручение этой фракции и сохраните её доверие.",
       );
     return this.trainingDay(mentor.experienceMultiplier, mentor.name);
-  }
-
-  public availableFutureBosses(): FutureBossRecord[] {
-    return worldQueries.availableFutureBosses(this.save);
-  }
-
-  public futureBossAvailability(bossId: string): ActivityAvailability {
-    return worldQueries.futureBossAvailability(this.save, bossId);
-  }
-
-  public beginFutureBossFight(bossId: string): PendingBattle {
-    this.assertNoPendingBattle();
-    const availability = this.futureBossAvailability(bossId);
-    if (!availability.unlocked) throw new Error(availability.reason);
-    const boss = this.save.npcLife!.futureBosses.find(
-      (candidate) => candidate.id === bossId,
-    )!;
-    this.prepareDayActivity();
-    return this.createPendingBattle(
-      "world-encounter",
-      boss.id,
-      this.futureBossEnemy(boss),
-      {},
-      "boss",
-      undefined,
-      {
-        encounterType: "future-boss",
-        futureBossId: boss.id,
-        eventCursor: this.latestEventId(),
-      },
-    );
   }
 
   public factionHunter(): EnemyProfile | undefined {
@@ -1806,6 +1774,8 @@ export class WorldGame {
   }
 
   private crownLeagueQualification(): ActivityAvailability {
+    const discovery = this.featureAvailability("crown-league");
+    if (!discovery.unlocked) return discovery;
     const hero = this.save.hero;
     const finalArenaIndex = ARENAS.length - 1;
     if (
@@ -1825,12 +1795,6 @@ export class WorldGame {
       };
     }
     const ordinaryRank = this.heroRank();
-    if (!ordinaryRank || ordinaryRank > 2) {
-      return {
-        unlocked: false,
-        reason: `Для квалификации нужно место #1–2 обычного рейтинга. Сейчас: #${ordinaryRank || "—"}.`,
-      };
-    }
     return {
       unlocked: true,
       reason: `Квалификация с места #${ordinaryRank}: только чемпион турнира войдёт в элиту.`,
@@ -3502,76 +3466,6 @@ export class WorldGame {
     return enemy;
   }
 
-  private futureBossEnemy(record: FutureBossRecord): EnemyProfile {
-    const source = this.enemyById(record.fighterId);
-    const enemy = source
-      ? (JSON.parse(JSON.stringify(source)) as EnemyProfile)
-      : this.createEnemy(
-          Math.min(this.save.hero.highestArena, ARENAS.length - 1),
-          true,
-        );
-    const previousLevel = Math.max(1, enemy.level);
-    const growth = 1 + Math.max(0, record.powerLevel - previousLevel) * 0.035;
-    const sourceBySlot = new Map(
-      enemy.equipment
-        .filter((item) => Object.values(enemy.equipped).includes(item.id))
-        .map((item) => [item.slot, item]),
-    );
-    enemy.id = record.fighterId;
-    enemy.name = record.name;
-    enemy.title =
-      record.archetype === "nemesis"
-        ? "противник, вернувшийся за последним боем"
-        : record.archetype === "relic-bearer"
-          ? "носитель прославленной мировой реликвии"
-          : "наследник школы старого мастера";
-    enemy.origin = "Летопись живого мира";
-    enemy.classId = record.classId;
-    enemy.level = record.powerLevel;
-    enemy.alive = true;
-    enemy.injuries = [];
-    enemy.equipment = (
-      ["weapon", "offhand", "head", "chest", "hands", "feet"] as EquipmentSlot[]
-    ).map((slot) => {
-      const existing = sourceBySlot.get(slot);
-      if (!existing) {
-        return createItem(record.powerLevel + 2, {
-          classId: record.classId,
-          slot,
-          minimumRarity: record.powerLevel >= 30 ? "mythic" : "legendary",
-          randomSource: this.random.loot,
-        });
-      }
-      return {
-        ...existing,
-        id: this.randomId(`future-boss-${slot}`),
-        level: Math.max(existing.level, record.powerLevel),
-        stats: Object.fromEntries(
-          Object.entries(existing.stats).map(([stat, value]) => [
-            stat,
-            Math.max(1, Math.round(Number(value) * growth)),
-          ]),
-        ),
-        allowedClasses:
-          existing.allowedClasses === "all"
-            ? ("all" as const)
-            : [...existing.allowedClasses],
-        affix: existing.affix ? { ...existing.affix } : undefined,
-        relicHistory: [...(existing.relicHistory ?? [])],
-        relicFeats: [...(existing.relicFeats ?? [])],
-        relicProperties: (existing.relicProperties ?? []).map((property) => ({
-          ...property,
-        })),
-      };
-    });
-    enemy.equipped = {};
-    enemy.equipment.forEach((item) => {
-      enemy.equipped[item.slot] = item.id;
-    });
-    enemy.rating = this.enemyWorldRating(enemy);
-    return enemy;
-  }
-
   private worldEncounterActivity(
     id: string,
     name: string,
@@ -3820,7 +3714,6 @@ export class WorldGame {
     this.healDailyInjuries();
     this.save.worldDay += 1;
     this.syncWorldSeason();
-    this.syncFutureBosses();
     this.syncFactionHunter();
     this.syncCrownSeason();
     this.syncNarrativeEvent();
@@ -3834,10 +3727,6 @@ export class WorldGame {
 
   private syncWorldSeason(): void {
     return this.seasons.syncWorldSeason();
-  }
-
-  private syncFutureBosses(): void {
-    return this.npcSimulation.syncFutureBosses();
   }
 
   private syncFactionHunter(): void {

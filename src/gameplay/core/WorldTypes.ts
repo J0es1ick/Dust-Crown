@@ -652,9 +652,9 @@ export interface ShopOffer {
   sold: boolean;
 }
 
-export type WorldFeatureId = "contracts" | "equipment-legacy";
-export type ContextualTutorialId =
-  "contracts" | "equipment-legacy" | "adaptation";
+export type WorldFeatureId =
+  "contracts" | "forge" | "equipment-legacy" | "crown-league";
+export type ContextualTutorialId = WorldFeatureId | "adaptation" | "world";
 
 export interface WorldFeatureUnlock {
   id: WorldFeatureId;

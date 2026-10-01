@@ -1,8 +1,9 @@
 import type { WorldPageId } from "../../../../app/routing/WorldPageCatalog";
+import { useGame } from "../../../../app/state/GameContext";
 import { PageHeading } from "../../../../shared/ui/common";
 import {
   CareersPanel,
-  FutureBossesPanel,
+  FactionHunterPanel,
 } from "../../components/CareersAndBosses/CareersAndBosses";
 import { FighterActivityPanel } from "../../components/FighterActivity/FighterActivity";
 import {
@@ -31,7 +32,7 @@ const headings: Record<
   fighters: {
     eyebrow: "СУДЬБЫ СОПЕРНИКОВ",
     title: "Бойцы и школы",
-    copy: "Здесь видно, чем заняты соперники, кто стал наставником и какие школы, династии и будущие боссы влияют на карьеру героя.",
+    copy: "Здесь видно, чем заняты соперники, кто стал наставником и какие школы и династии влияют на карьеру героя.",
   },
   relics: {
     eyebrow: "ПАМЯТЬ МИРА",
@@ -51,10 +52,17 @@ export function ChroniclePage({
   section?: ChronicleSection;
 }) {
   const heading = headings[section];
+  const { openDialog } = useGame();
   return (
     <>
       <PageHeading eyebrow={heading.eyebrow} title={heading.title}>
         <p>{heading.copy}</p>
+        <button
+          className="plain-button"
+          onClick={() => openDialog({ kind: "tutorial", id: "world" })}
+        >
+          Как устроен мир
+        </button>
       </PageHeading>
       <div
         className={`living-world-board chronicle-${section}`}
@@ -69,7 +77,7 @@ export function ChroniclePage({
           <>
             <FighterActivityPanel />
             <CareersPanel />
-            <FutureBossesPanel />
+            <FactionHunterPanel />
           </>
         ) : section === "relics" ? (
           <RelicsAndVeterans />

@@ -77,7 +77,7 @@ describe("world page catalog", () => {
   });
 
   it("gates legacy behind equipment-legacy without gating the shop", () => {
-    const locked = (feature: "contracts" | "equipment-legacy") =>
+    const locked = (feature: string) =>
       feature === "contracts";
     const unlocked = () => true;
 
@@ -161,6 +161,7 @@ describe("world page markup", () => {
   });
 
   it("keeps identity pages under hero and build pages under equipment", () => {
+    store.game!.save.hero.arenaWins[0] = 1;
     store.setPage("career");
     const ui = show(Header);
     const labels = Array.from(
@@ -262,7 +263,7 @@ describe("world page markup", () => {
       fighters.container.querySelector(".world-activities"),
     ).not.toBeNull();
     expect(fighters.container.querySelector(".world-careers")).not.toBeNull();
-    expect(fighters.container.querySelector(".future-bosses")).not.toBeNull();
+    expect(fighters.container.querySelector(".future-bosses")).toBeNull();
     fighters.unmount();
     const relics = renderSection("relics");
     expect(relics.container.querySelector(".world-relics")).not.toBeNull();
