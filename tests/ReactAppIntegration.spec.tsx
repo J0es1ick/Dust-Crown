@@ -86,7 +86,13 @@ describe("React application integration", () => {
   async function loadedWorld() {
     const game = WorldGame.create("Готовый герой", "Knight", 54801);
     game.save.tutorialCompleted = true;
-    game.save.seenContextualTutorialIds = ["world", "contracts", "forge", "equipment-legacy", "crown-league"];
+    game.save.seenContextualTutorialIds = [
+      "world",
+      "contracts",
+      "forge",
+      "equipment-legacy",
+      "crown-league",
+    ];
     store.replaceGame(game);
     const ui = application();
     await ui.findByRole(
@@ -206,6 +212,11 @@ describe("React application integration", () => {
 
   test("hero controls share their state between equipment pages and settings", async () => {
     const { game, ui } = await loadedWorld();
+    act(() =>
+      store.act((current) => {
+        current.save.hero.highestArena = 1;
+      }),
+    );
     fireEvent.click(navButton(ui, "Снаряжение"));
     const equipment = await ui.findByRole("checkbox", {
       name: "Автоматически надевать лучшее",
@@ -277,11 +288,18 @@ describe("React application integration", () => {
       store.act((current) => {
         current.save.tournamentRegistrations = {};
         current.save.hero.highestArena = ARENAS.length - 1;
+        current.save.hero.highestArena = ARENAS.length - 1;
         current.save.hero.arenaWins[ARENAS.length - 1] = 1;
       }),
     );
-    expect(goal().getByRole("heading").textContent).toBe("Первое место в мировом рейтинге");
-    act(() => store.act((current) => { current.save.hero.rating = 100_000; }));
+    expect(goal().getByRole("heading").textContent).toBe(
+      "Первое место в мировом рейтинге",
+    );
+    act(() =>
+      store.act((current) => {
+        current.save.hero.rating = 100_000;
+      }),
+    );
     expect(goal().getByRole("heading").textContent).toBe(
       "Путь к вершине элиты",
     );
@@ -337,10 +355,13 @@ describe("React application integration", () => {
     game.save.enemies.find(
       (fighter) => fighter.id === veteranId,
     )!.carriedFromCycle = 7;
-    act(() => store.act((current) => {
-      current.save.hero.arenaWins[ARENAS.length - 1] = 1;
-      current.save.hero.rating = 100_000;
-    }));
+    act(() =>
+      store.act((current) => {
+        current.save.hero.highestArena = ARENAS.length - 1;
+        current.save.hero.arenaWins[ARENAS.length - 1] = 1;
+        current.save.hero.rating = 100_000;
+      }),
+    );
     const routes = [
       ["Герой", "Ваш герой"],
       ["Снаряжение", "Инвентарь"],
@@ -384,6 +405,7 @@ describe("React application integration", () => {
     const { game, ui } = await loadedWorld();
     const day = game.save.worldDay;
     const activity = document.getElementById("daily-actions-section");
+    fireEvent.click(ui.getByText("Подготовка и ожидание турнира"));
     const button = ui.getByRole("button", { name: "Тренироваться" });
     button.focus();
     fireEvent.click(button);
@@ -396,6 +418,11 @@ describe("React application integration", () => {
 
   test("opens the epoch archive before completing an anchored navigation", async () => {
     const { ui } = await loadedWorld();
+    act(() =>
+      store.act((current) => {
+        current.save.hero.highestArena = 2;
+      }),
+    );
     const scrolled: HTMLElement[] = [];
     jest
       .spyOn(HTMLElement.prototype, "scrollIntoView")
@@ -462,8 +489,13 @@ describe("React application integration", () => {
         .getByRole("button", { name: `Записан на день ${registeredDay}` })
         .hasAttribute("disabled"),
     ).toBe(true);
-    while (game.save.worldDay < registeredDay!)
+    while (game.save.worldDay < registeredDay!) {
+      const details =
+        document.querySelector<HTMLDetailsElement>(".campaign-training")!;
+      if (!details.open)
+        fireEvent.click(ui.getByText("Подготовка и ожидание турнира"));
       fireEvent.click(ui.getByRole("button", { name: "Тренироваться" }));
+    }
     const reminder = await ui.findByRole("complementary", {
       name: "События сегодняшнего дня",
     });

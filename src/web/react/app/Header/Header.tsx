@@ -1,3 +1,4 @@
+import { campaignStage } from "../../../../gameplay/progression/CampaignProgression";
 import { useLayoutEffect, useRef } from "react";
 import { CLASS_DEFINITIONS } from "../../../../catalogs/WorldCatalog";
 import {
@@ -73,6 +74,7 @@ export function Header() {
   const header = useRef<HTMLElement>(null),
     nav = useRef<HTMLElement>(null);
   const hero = game.save.hero;
+  const stage = campaignStage(game.save);
   const eliteRank = game.heroEliteRank();
   const group = WORLD_PAGE_NAV_GROUP[page];
   const secondaryPages = WORLD_PAGE_IDS.filter(
@@ -80,12 +82,14 @@ export function Header() {
       id !== "shop" &&
       id !== "class-change" &&
       WORLD_PAGE_NAV_GROUP[id] === group &&
-      isWorldPageAvailable(id, (feature) => game.isFeatureUnlocked(feature)),
+      isWorldPageAvailable(
+        id,
+        (feature) => game.isFeatureUnlocked(feature),
+        game.save,
+      ),
   );
   const primaryStatus: Record<(typeof groups)[number]["page"], string> = {
-    map: game.isFeatureUnlocked("crown-league")
-      ? "5 направлений"
-      : "4 направления",
+    map: `${stage + 1} / 6 · арены`,
     hero: `ур. ${hero.level}`,
     arsenal: itemCount(hero.inventory.length),
     shop: `${hero.gold.toLocaleString("ru-RU")} ¤`,
@@ -176,13 +180,13 @@ export function Header() {
             </dt>
             <dd>{hero.gold.toLocaleString("ru-RU")} ¤</dd>
           </div>
-          <div>
+          <div hidden={stage === 0}>
             <dt data-term="marks" tabIndex={0}>
               Печати
             </dt>
             <dd>{hero.temperingMarks ?? 0}</dd>
           </div>
-          <div>
+          <div hidden={stage < 3}>
             <dt data-term="rank" tabIndex={0}>
               Место
             </dt>
@@ -215,27 +219,39 @@ export function Header() {
       </header>
       <nav className="main-nav" ref={nav} aria-label="Разделы игры">
         <div className="nav-primary">
-          {groups.map((entry) => (
-            <button
-              key={entry.page}
-              className={
-                WORLD_PAGE_NAV_GROUP[entry.page] === group ? "active" : ""
-              }
-              aria-current={
-                WORLD_PAGE_NAV_GROUP[entry.page] === group ? "page" : undefined
-              }
-              aria-label={entry.label}
-              onClick={() => navigate(entry.page)}
-            >
-              <span className="nav-icon" aria-hidden="true">
-                {entry.icon}
-              </span>
-              <span className="nav-copy">
-                <b>{entry.label}</b>
-                <small aria-hidden="true">{primaryStatus[entry.page]}</small>
-              </span>
-            </button>
-          ))}
+          {groups
+            .filter(
+              (entry) =>
+                isWorldPageAvailable(
+                  entry.page,
+                  (feature) => game.isFeatureUnlocked(feature),
+                  game.save,
+                ) &&
+                (entry.page !== "arsenal" || stage > 0),
+            )
+            .map((entry) => (
+              <button
+                key={entry.page}
+                className={
+                  WORLD_PAGE_NAV_GROUP[entry.page] === group ? "active" : ""
+                }
+                aria-current={
+                  WORLD_PAGE_NAV_GROUP[entry.page] === group
+                    ? "page"
+                    : undefined
+                }
+                aria-label={entry.label}
+                onClick={() => navigate(entry.page)}
+              >
+                <span className="nav-icon" aria-hidden="true">
+                  {entry.icon}
+                </span>
+                <span className="nav-copy">
+                  <b>{entry.label}</b>
+                  <small aria-hidden="true">{primaryStatus[entry.page]}</small>
+                </span>
+              </button>
+            ))}
         </div>
         <div
           className="nav-secondary"

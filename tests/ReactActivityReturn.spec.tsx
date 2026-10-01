@@ -100,6 +100,7 @@ describe("React activity return navigation", () => {
 
   async function loadedWorld(page: "map" | "shop" = "map") {
     const game = WorldGame.create("Возвращение из боя", "Knight", 94901);
+    game.save.hero.highestArena = 1;
     game.save.tutorialCompleted = true;
     jest.spyOn(game, "pendingNarrativeEvent").mockReturnValue(undefined);
     store.replaceGame(game);

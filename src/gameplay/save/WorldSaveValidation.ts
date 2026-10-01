@@ -1,3 +1,5 @@
+import { HERO_BACKGROUNDS } from "../../catalogs/ChampionCatalog";
+import { ARENAS } from "../../catalogs/WorldCatalog";
 import {
   EquipmentItem,
   EquipmentSlot,
@@ -980,6 +982,9 @@ export function validateWorldSave(value: unknown): WorldSaveValidationResult {
   const itemIds: string[] = [];
   if (!isRecord(value)) return { valid: false, issues: [{ path: "$", message: "Сохранение должно быть объектом." }] };
 
+  if (value.journey !== undefined) {
+    issues.push({ path: "$.journey", message: "Экспериментальная кампания открывается в версии с заклятым врагом. Загрузите сохранение обычной кампании." });
+  }
   if (value.version !== 2 && value.version !== 3) {
     issues.push({ path: "$.version", message: "Поддерживаются только версии сохранений 2 и 3." });
   }
@@ -994,6 +999,12 @@ export function validateWorldSave(value: unknown): WorldSaveValidationResult {
     issues.push({ path: "$.hero", message: "Данные главного героя отсутствуют." });
   } else {
     const hero = value.hero;
+    if (hero.background !== undefined && !HERO_BACKGROUNDS.some(entry => entry.id === hero.background))
+      issues.push({ path: "$.hero.background", message: "Неизвестная предыстория героя." });
+    if (hero.championArenaIds !== undefined && (!Array.isArray(hero.championArenaIds)
+      || !hero.championArenaIds.every(id => ARENAS.some(arena => arena.id === id))
+      || new Set(hero.championArenaIds).size !== hero.championArenaIds.length))
+      issues.push({ path: "$.hero.championArenaIds", message: "Список чемпионских трофеев повреждён." });
     if (typeof hero.id !== "string" || typeof hero.name !== "string") {
       issues.push({ path: "$.hero", message: "Имя или идентификатор героя повреждены." });
     }

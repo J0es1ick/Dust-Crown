@@ -140,6 +140,7 @@ describe("world page markup", () => {
   });
 
   it("renders shop only in primary navigation and legacy in equipment navigation", () => {
+    store.game!.save.hero.highestArena = 4;
     store.game!.save.hero.arenaWins[3] = 1;
     store.setPage("legacy");
     const ui = show(Header);
@@ -161,6 +162,7 @@ describe("world page markup", () => {
   });
 
   it("keeps identity pages under hero and build pages under equipment", () => {
+    store.game!.save.hero.highestArena = 4;
     store.game!.save.hero.arenaWins[0] = 1;
     store.setPage("career");
     const ui = show(Header);
@@ -193,6 +195,7 @@ describe("world page markup", () => {
   });
 
   it("does not offer legacy navigation before the required milestone", () => {
+    store.game!.save.hero.highestArena = 1;
     store.setPage("arsenal");
     const ui = show(Header);
     expect(ui.container.querySelector('[data-page="legacy"]')).toBeNull();
@@ -200,6 +203,7 @@ describe("world page markup", () => {
   });
 
   it("orders world navigation from the current world to people, relics, contracts and history", () => {
+    store.game!.save.hero.highestArena = 4;
     store.game!.save.hero.arenaWins[0] = 1;
     store.setPage("chronicle");
     const ui = show(Header);
@@ -224,6 +228,7 @@ describe("world page markup", () => {
   });
 
   it("keeps forge focused and gives legacy both workshops", () => {
+    store.game!.save.hero.highestArena = 4;
     store.game!.save.hero.arenaWins[3] = 1;
     const forge = show(ForgePage);
     expect(forge.container.querySelector("#forge-grid")).not.toBeNull();

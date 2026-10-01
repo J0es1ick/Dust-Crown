@@ -1,3 +1,4 @@
+import { campaignMapSectionAvailable } from "../../../../../gameplay/progression/CampaignProgression";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import type { ContextualTutorialId } from "../../../../../gameplay/core/WorldTypes";
@@ -41,9 +42,16 @@ export function TutorialDialog({
     ).filter(
       (step) =>
         (!step.feature || game.isFeatureUnlocked(step.feature)) &&
+        (step.page !== "map" ||
+          campaignMapSectionAvailable(
+            step.target.replace("#", ""),
+            game.save,
+          )) &&
         WORLD_PAGE_IDS.includes(step.page as WorldPageId) &&
-        isWorldPageAvailable(step.page as WorldPageId, (feature) =>
-          game.isFeatureUnlocked(feature),
+        isWorldPageAvailable(
+          step.page as WorldPageId,
+          (feature) => game.isFeatureUnlocked(feature),
+          game.save,
         ),
     ),
   );
@@ -97,8 +105,10 @@ export function TutorialDialog({
     });
     flushSync(() => {
       store.setPage(
-        isWorldPageAvailable(origin.page, (feature) =>
-          game.isFeatureUnlocked(feature),
+        isWorldPageAvailable(
+          origin.page,
+          (feature) => game.isFeatureUnlocked(feature),
+          game.save,
         )
           ? origin.page
           : "map",

@@ -788,7 +788,14 @@ function attackDamage(
         criticalGuard,
     ),
   );
-  const critical = random.next() * 100 < criticalChance;
+  const champion = actor.setCounts[`champion-${actor.classId}`] ?? 0;
+  const championCritical =
+    champion > 0 &&
+    (actor.classId === "Archer" || actor.classId === "Gunsmith") &&
+    actor.attackCounter % 3 === 0;
+  const critical = random.next() * 100 < criticalChance || championCritical;
+  if (championCritical)
+    detail += "; алый прицел: гарантированный критический удар";
   const variance = 0.9 + random.next() * 0.2;
   const weakened = 1 - actor.weakened;
   actor.weakened = 0;
@@ -973,7 +980,8 @@ function performTurn(
     action = skill.name;
     actor.cooldowns[skill.id] = Math.max(
       1,
-      (actor.setCounts.astral ?? 0) >= 6
+      (actor.setCounts.astral ?? 0) >= 6 ||
+        (actor.setCounts["champion-Wizard"] ?? 0) > 0
         ? Math.max(2, skill.cooldown - 1)
         : skill.cooldown,
     );
@@ -1080,6 +1088,15 @@ function performTurn(
     statusComboIds.push(...result.statusComboIds);
   }
 
+  const championPieces = actor.setCounts[`champion-${actor.classId}`] ?? 0;
+  if (
+    championPieces >= 4 &&
+    ["Archer", "Monk", "Swordsman"].includes(actor.classId) &&
+    damage > 0
+  ) {
+    damage = Math.round(damage * 1.12);
+    detail += "; алый комплект усилил удар";
+  }
   const resonancePower = resonanceDamageMultiplier(
     actor.equipmentResonance,
     targetAfflicted,
@@ -1115,14 +1132,40 @@ function performTurn(
   if (
     damage >= target.health &&
     target.health > 1 &&
-    (target.setCounts.bastion ?? 0) >= 6 &&
+    ((target.setCounts.bastion ?? 0) >= 6 ||
+      (target.setCounts["champion-Knight"] ?? 0) > 0) &&
     !target.usedMechanics.has("bastion-last-stand")
   ) {
     target.usedMechanics.add("bastion-last-stand");
     damage = target.health - 1;
     detail += "; последний бастион оставил бойцу 1 HP";
   }
+  const damageDealt = Math.min(target.health, damage);
   target.health = Math.max(0, target.health - damage);
+  if (championPieces > 0 && !actor.disableHealing) {
+    const leech =
+      actor.classId === "Swordsman" ||
+      (actor.classId === "Knight" && championPieces >= 4)
+        ? 0.08
+        : actor.classId === "Gunsmith" && championPieces >= 4 && critical
+          ? 0.1
+          : 0;
+    const recovery =
+      actor.classId === "Monk" && actor.actionsTaken % 3 === 0
+        ? actor.maxHealth * 0.06
+        : actor.classId === "Wizard" && championPieces >= 4 && skill
+          ? actor.maxHealth * 0.03
+          : 0;
+    const restored = Math.min(
+      actor.maxHealth - actor.health,
+      Math.round((damageDealt * leech + recovery) * healingPressure),
+    );
+    if (restored > 0) {
+      actor.health += restored;
+      healing += restored;
+      detail += `; алый дар восстановил ${restored} HP`;
+    }
+  }
   if (
     !actor.disableHealing &&
     critical &&

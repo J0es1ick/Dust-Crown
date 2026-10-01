@@ -1,3 +1,7 @@
+import {
+  HERO_BACKGROUNDS,
+  type HeroBackground,
+} from "../../../../../catalogs/ChampionCatalog";
 import { useRef, useState } from "react";
 import { CLASS_DEFINITIONS } from "../../../../../catalogs/WorldCatalog";
 import type { HeroClass } from "../../../../../gameplay/core/WorldTypes";
@@ -25,6 +29,7 @@ export function CreationScreen() {
   });
   const [name, setName] = useState("");
   const [classId, setClassId] = useState<HeroClass>("Knight");
+  const [background, setBackground] = useState<HeroBackground>("exile");
   const [hair, setHair] = useState<0 | 1 | 2>(0);
   const classes = Object.values(CLASS_DEFINITIONS);
   const classButtons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -34,7 +39,7 @@ export function CreationScreen() {
         className="creation-paper"
         onSubmit={(event) => {
           event.preventDefault();
-          store.createHero(name, classId, hair);
+          store.createHero(name, classId, hair, background);
         }}
       >
         <p className="eyebrow">НОВАЯ ЛЕТОПИСЬ</p>
@@ -60,6 +65,29 @@ export function CreationScreen() {
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
+        </label>
+        <label className="name-field">
+          Предыстория
+          <select
+            value={background}
+            onChange={(event) =>
+              setBackground(event.target.value as HeroBackground)
+            }
+            aria-describedby="background-description"
+          >
+            {HERO_BACKGROUNDS.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name}
+              </option>
+            ))}
+          </select>
+          <small id="background-description">
+            {
+              HERO_BACKGROUNDS.find((entry) => entry.id === background)
+                ?.description
+            }{" "}
+            Предыстория задаёт образ героя и не меняет сложность.
+          </small>
         </label>
         <div className="appearance-choice">
           <label>

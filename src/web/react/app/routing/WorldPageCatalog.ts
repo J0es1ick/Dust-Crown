@@ -1,3 +1,5 @@
+import { campaignStage } from "../../../../gameplay/progression/CampaignProgression";
+import type { GameSave } from "../../../../gameplay/core/WorldTypes";
 import type { WorldFeatureId } from "../../../../gameplay/core/WorldTypes";
 
 export const WORLD_PAGE_IDS = [
@@ -69,7 +71,31 @@ export const WORLD_PAGE_FEATURE: Readonly<
 export function isWorldPageAvailable(
   page: WorldPageId,
   isFeatureUnlocked: (feature: WorldFeatureId) => boolean,
+  save?: GameSave,
 ): boolean {
+  if (save) {
+    const stages: Partial<Record<WorldPageId, number>> = {
+      arsenal: 1,
+      shop: 1,
+      skills: 1,
+      forge: 1,
+      legacy: 2,
+      collections: 2,
+      contracts: 2,
+      chronicle: 2,
+      career: 2,
+      leaders: 3,
+      fighters: 3,
+      "class-change": 3,
+      relics: 4,
+      history: 2,
+    };
+    if (
+      campaignStage(save) < (stages[page] ?? 0) &&
+      !(page === "history" && save.legacy.cycle > 1)
+    )
+      return false;
+  }
   const feature = WORLD_PAGE_FEATURE[page];
   return !feature || isFeatureUnlocked(feature);
 }

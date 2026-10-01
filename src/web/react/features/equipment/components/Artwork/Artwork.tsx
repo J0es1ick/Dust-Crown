@@ -32,7 +32,9 @@ function dollState(
     name: item.name,
     templateId: item.templateId,
     rarity: item.rarity,
-    rarityColor: rarityColors[item.rarity],
+    rarityColor: item.templateId.startsWith("champion-")
+      ? "#b34c40"
+      : rarityColors[item.rarity],
     setId: item.setId,
     visualClassId: visualClass(item, classId),
     relicTier: item.relicTier,

@@ -55,7 +55,9 @@ async function createHero(page: Page, finishTutorial = false) {
     for (let step = 0; step < 3; step++) {
       await page.getByRole("button", { name: "Далее", exact: true }).click();
     }
-    await page.getByRole("button", { name: "Начать игру", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Начать игру", exact: true })
+      .click();
   } else {
     await page.getByRole("button", { name: "Пропустить", exact: true }).click();
   }
@@ -64,17 +66,79 @@ async function createHero(page: Page, finishTutorial = false) {
   ).toBeVisible();
 }
 
+async function importProgressedCampaign(
+  page: Page,
+  stage = 5,
+  worldTutorial = false,
+) {
+  const game = WorldGame.create(
+    "Чемпион браузера",
+    "Swordsman",
+    Date.now(),
+    "debtor",
+  );
+  game.save.hero.highestArena = stage;
+  game.save.hero.level = 35;
+  game.save.hero.arenaWins = ARENAS.map((_, index) =>
+    index < stage ? ARENAS[index].winsToAdvance : 0,
+  );
+  game.save.tutorialCompleted = true;
+  game.save.seenContextualTutorialIds = [
+    "forge",
+    "equipment-legacy",
+    "contracts",
+    "crown-league",
+    "adaptation",
+  ];
+  if (!worldTutorial) game.save.seenContextualTutorialIds.push("world");
+  game.consumeFeatureUnlocks();
+  await page
+    .getByRole("navigation", { name: "Разделы игры" })
+    .getByRole("button", { name: "Настройки", exact: true })
+    .click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("region", { name: "Летопись", exact: true })
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: "campaign.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(exportWorldSave(game.save)),
+    });
+  await expect(page.locator(".hero-summary strong")).toHaveText(
+    game.save.hero.name,
+  );
+  await page
+    .getByRole("navigation", { name: "Разделы игры" })
+    .getByRole("button", { name: "Карта", exact: true })
+    .click();
+}
+
 async function filledRows(page: Page, selector: string) {
   const rows = await page.locator(selector).evaluate((element) => {
     const container = element.getBoundingClientRect();
     const style = getComputedStyle(element);
-    const left = container.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
-    const right = container.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth);
-    const buttons = Array.from(element.querySelectorAll<HTMLButtonElement>(':scope > button')).map((button) => ({ left: button.getBoundingClientRect().left, right: button.getBoundingClientRect().right, top: button.offsetTop }));
+    const left =
+      container.left +
+      parseFloat(style.paddingLeft) +
+      parseFloat(style.borderLeftWidth);
+    const right =
+      container.right -
+      parseFloat(style.paddingRight) -
+      parseFloat(style.borderRightWidth);
+    const buttons = Array.from(
+      element.querySelectorAll<HTMLButtonElement>(":scope > button"),
+    ).map((button) => ({
+      left: button.getBoundingClientRect().left,
+      right: button.getBoundingClientRect().right,
+      top: button.offsetTop,
+    }));
     return [...new Set(buttons.map((button) => button.top))].map((top) => {
       const row = buttons.filter((button) => button.top === top);
-      return { leftGap: Math.min(...row.map((button) => button.left)) - left,
-        rightGap: right - Math.max(...row.map((button) => button.right)) };
+      return {
+        leftGap: Math.min(...row.map((button) => button.left)) - left,
+        rightGap: right - Math.max(...row.map((button) => button.right)),
+      };
     });
   });
   expect(rows.length).toBeGreaterThan(0);
@@ -84,61 +148,139 @@ async function filledRows(page: Page, selector: string) {
   });
 }
 
-test("discovery layouts fill available space and world cards align in both themes", async ({ page }, testInfo) => {
+test("discovery layouts fill available space and world cards align in both themes", async ({
+  page,
+}, testInfo) => {
   await createHero(page);
   const navigation = page.getByRole("navigation", { name: "Разделы игры" });
   await filledRows(page, ".map-shortcuts");
-  await filledRows(page, ".map-quick-actions");
-  await expect(page.getByRole("button", { name: /Лига короны/ })).toHaveCount(0);
-  await navigation.getByRole("button", { name: "Снаряжение", exact: true }).click();
-  await expect(navigation.getByRole("button", { name: "Кузница", exact: true })).toHaveCount(0);
-  await expect(navigation.getByRole("button", { name: "Наследие", exact: true })).toHaveCount(0);
+  await expect(page.locator(".map-quick-actions")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Лига короны/ })).toHaveCount(
+    0,
+  );
+  await expect(
+    navigation.getByRole("button", { name: "Снаряжение", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    navigation.getByRole("button", { name: "Кузница", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    navigation.getByRole("button", { name: "Наследие", exact: true }),
+  ).toHaveCount(0);
 
   const game = WorldGame.create("Длинное имя чемпиона", "Knight", Date.now());
   game.save.hero.level = 30;
   game.save.hero.highestArena = ARENAS.length - 1;
   game.save.hero.arenaWins = ARENAS.map(() => 1);
   game.save.hero.rating = 100_000;
-  game.save.hero.factionReputation = { wardens: 23, "free-company": 17, "red-book": 10 };
+  game.save.hero.factionReputation = {
+    wardens: 23,
+    "free-company": 17,
+    "red-book": 10,
+  };
   game.save.tutorialCompleted = true;
-  game.save.seenContextualTutorialIds = ["forge", "equipment-legacy", "contracts", "crown-league", "world", "adaptation"];
+  game.save.seenContextualTutorialIds = [
+    "forge",
+    "equipment-legacy",
+    "contracts",
+    "crown-league",
+    "world",
+    "adaptation",
+  ];
   game.consumeFeatureUnlocks();
-  game.save.enemies.filter((enemy) => enemy.alive).forEach((enemy, index) => {
-    enemy.lastActivity = { day: 1, activity: "training", description: index % 2 ? "Готовится к турниру." : "Ищет встречу с давним соперником, чтобы продолжить личное соперничество и вернуть потерянное место в рейтинге." };
-    const profile = game.save.npcLife!.profiles[enemy.id];
-    if (profile) profile.nickname = index % 2 ? "Стойкий" : "Хранитель мифического шлема церемониймейстера · Воля королей";
-  });
-  await navigation.getByRole("button", { name: "Настройки", exact: true }).click();
+  game.save.enemies
+    .filter((enemy) => enemy.alive)
+    .forEach((enemy, index) => {
+      enemy.lastActivity = {
+        day: 1,
+        activity: "training",
+        description:
+          index % 2
+            ? "Готовится к турниру."
+            : "Ищет встречу с давним соперником, чтобы продолжить личное соперничество и вернуть потерянное место в рейтинге.",
+      };
+      const profile = game.save.npcLife!.profiles[enemy.id];
+      if (profile)
+        profile.nickname =
+          index % 2
+            ? "Стойкий"
+            : "Хранитель мифического шлема церемониймейстера · Воля королей";
+    });
+  await navigation
+    .getByRole("button", { name: "Настройки", exact: true })
+    .click();
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("region", { name: "Летопись", exact: true }).locator('input[type="file"]').setInputFiles({ name: "campaign.json", mimeType: "application/json", buffer: Buffer.from(exportWorldSave(game.save)) });
-  await expect(page.locator(".hero-summary strong")).toHaveText(game.save.hero.name);
+  await page
+    .getByRole("region", { name: "Летопись", exact: true })
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: "campaign.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(exportWorldSave(game.save)),
+    });
+  await expect(page.locator(".hero-summary strong")).toHaveText(
+    game.save.hero.name,
+  );
   for (const theme of ["light", "dark"]) {
-    await navigation.getByRole("button", { name: "Настройки", exact: true }).click();
-    await page.getByRole("combobox", { name: "Тема", exact: true }).selectOption(theme);
+    await navigation
+      .getByRole("button", { name: "Настройки", exact: true })
+      .click();
+    await page
+      .getByRole("combobox", { name: "Тема", exact: true })
+      .selectOption(theme);
     await page.getByRole("checkbox", { name: "Меньше анимаций" }).check();
-    await navigation.getByRole("button", { name: "Карта", exact: true }).click();
+    await navigation
+      .getByRole("button", { name: "Карта", exact: true })
+      .click();
     await filledRows(page, ".map-shortcuts");
     await filledRows(page, ".map-quick-actions");
     await noOverflow(page);
     await navigation.getByRole("button", { name: "Мир", exact: true }).click();
-    await navigation.getByRole("button", { name: "Контракты", exact: true }).click();
+    await navigation
+      .getByRole("button", { name: "Контракты", exact: true })
+      .click();
     await expect(page.locator(".faction-card")).toHaveCount(3);
     if (testInfo.project.name === "desktop") {
-      for (const selector of ["h3", "blockquote", ".faction-control-summary", ".stat-row", ".faction-perk-list > strong", ".faction-perk:nth-child(2)", ".faction-perk:nth-child(3)", ".faction-perk:nth-child(4)", ".faction-campaign h4", ".faction-campaign button"]) {
-        const tops = await page.locator(`.faction-card ${selector}`).evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
+      for (const selector of [
+        "h3",
+        "blockquote",
+        ".faction-control-summary",
+        ".stat-row",
+        ".faction-perk-list > strong",
+        ".faction-perk:nth-child(2)",
+        ".faction-perk:nth-child(3)",
+        ".faction-perk:nth-child(4)",
+        ".faction-campaign h4",
+        ".faction-campaign button",
+      ]) {
+        const tops = await page
+          .locator(`.faction-card ${selector}`)
+          .evaluateAll((elements) =>
+            elements.map((element) => element.getBoundingClientRect().top),
+          );
         expect(Math.max(...tops) - Math.min(...tops), selector).toBeLessThan(2);
       }
     }
     await noOverflow(page);
     await accessible(page);
-    await page.locator(".faction-grid").screenshot({ path: testInfo.outputPath(`factions-${theme}.png`) });
-    await navigation.getByRole("button", { name: "Бойцы и школы", exact: true }).click();
-    const heights = await page.locator(".world-activities .paged-list-item > article").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
+    await page
+      .locator(".faction-grid")
+      .screenshot({ path: testInfo.outputPath(`factions-${theme}.png`) });
+    await navigation
+      .getByRole("button", { name: "Бойцы и школы", exact: true })
+      .click();
+    const heights = await page
+      .locator(".world-activities .paged-list-item > article")
+      .evaluateAll((elements) =>
+        elements.map((element) => element.getBoundingClientRect().height),
+      );
     expect(heights.length).toBeGreaterThan(1);
     expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(2);
     await noOverflow(page);
     await accessible(page);
-    await page.locator(".world-activities").screenshot({ path: testInfo.outputPath(`fighters-${theme}.png`) });
+    await page
+      .locator(".world-activities")
+      .screenshot({ path: testInfo.outputPath(`fighters-${theme}.png`) });
   }
 });
 
@@ -158,11 +300,9 @@ async function changeEquipmentFromHero(page: Page) {
     name: "Выберите: оружие",
     exact: true,
   });
-  const item = picker
-    .getByRole("article")
-    .filter({
-      has: page.getByRole("heading", { name: equippedName, exact: true }),
-    });
+  const item = picker.getByRole("article").filter({
+    has: page.getByRole("heading", { name: equippedName, exact: true }),
+  });
   await item.getByRole("button", { name: "Надеть", exact: true }).click();
   await expect(picker.locator(".picker-current")).toContainText(equippedName);
   await noOverflow(page);
@@ -172,38 +312,79 @@ async function changeEquipmentFromHero(page: Page) {
   await expect(page).toHaveURL(/#\/hero$/);
 }
 
-test("a second tab waits and resumes the latest campaign after the first closes", async ({ page, context }) => {
+test("a second tab waits and resumes the latest campaign after the first closes", async ({
+  page,
+  context,
+}) => {
   await createHero(page);
   const other = await context.newPage();
   await other.goto("./");
-  await expect(other.getByRole("heading", { name: "Ожидаем доступ к игре" })).toBeVisible();
-  await expect(other.getByRole("button", { name: "Начать дуэль", exact: true })).toHaveCount(0);
+  await expect(
+    other.getByRole("heading", { name: "Ожидаем доступ к игре" }),
+  ).toBeVisible();
+  await expect(
+    other.getByRole("button", { name: "Начать дуэль", exact: true }),
+  ).toHaveCount(0);
   await accessible(other);
   await noOverflow(other);
-  await page.getByRole("button", { name: "Начать дуэль", exact: true }).first().click();
-  await page.getByRole("button", { name: "Пропустить бой", exact: true }).click();
-  await page.getByRole("button", { name: "Продолжить игру", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Начать дуэль", exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole("button", { name: "Пропустить бой", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Продолжить игру", exact: true })
+    .click();
   await page.close();
-  await expect(other.getByRole("heading", { name: "Карта окрестностей" })).toBeVisible();
-  await expect(other.getByText("День мира", { exact: true }).locator("..").getByRole("definition")).toHaveText("2");
+  await expect(
+    other.getByRole("heading", { name: "Карта окрестностей" }),
+  ).toBeVisible();
+  await expect(
+    other
+      .getByText("День мира", { exact: true })
+      .locator("..")
+      .getByRole("definition"),
+  ).toHaveText("2");
   await other.reload();
-  await expect(other.getByRole("heading", { name: "Карта окрестностей" })).toBeVisible();
-  await expect(other.getByText("День мира", { exact: true }).locator("..").getByRole("definition")).toHaveText("2");
+  await expect(
+    other.getByRole("heading", { name: "Карта окрестностей" }),
+  ).toBeVisible();
+  await expect(
+    other
+      .getByText("День мира", { exact: true })
+      .locator("..")
+      .getByRole("definition"),
+  ).toHaveText("2");
 });
 
-test("the short introduction leads directly to the first fight and then tournament progress", async ({ page }) => {
+test("the short introduction leads directly to the first fight and then tournament progress", async ({
+  page,
+}) => {
   await createHero(page, true);
-  const firstFight = page.getByRole("button", { name: "Первая дуэль", exact: true });
+  const firstFight = page.getByRole("button", {
+    name: "Первая дуэль",
+    exact: true,
+  });
   await expect(firstFight).toBeInViewport();
   await noOverflow(page);
   await accessible(page);
   await firstFight.click();
   const battle = page.getByRole("dialog");
-  await expect(battle.getByRole("heading", { name: "Оцените соперника" })).toBeVisible();
-  await battle.getByRole("button", { name: "Пропустить бой", exact: true }).click();
-  await battle.getByRole("button", { name: "Продолжить игру", exact: true }).click();
+  await expect(
+    battle.getByRole("heading", { name: "Оцените соперника" }),
+  ).toBeVisible();
+  await battle
+    .getByRole("button", { name: "Пропустить бой", exact: true })
+    .click();
+  await battle
+    .getByRole("button", { name: "Продолжить игру", exact: true })
+    .click();
   await expect(firstFight).toHaveCount(0);
-  await expect(page.locator("#next-goal")).toContainText("Чемпионства на этой арене");
+  await expect(page.locator("#next-goal")).toContainText(
+    "Чемпионства на этой арене",
+  );
 });
 
 test("settings persist, dark screens remain readable and autostart can be paused", async ({
@@ -244,6 +425,7 @@ test("settings persist, dark screens remain readable and autostart can be paused
   await noOverflow(page);
   await accessible(page);
   await page.locator(".header-save-menu > summary").click();
+  await importProgressedCampaign(page, 5, true);
   for (const name of [
     "Герой",
     "Снаряжение",
@@ -259,8 +441,10 @@ test("settings persist, dark screens remain readable and autostart can be paused
       .getByRole("button", { name: new RegExp(`^${name}(?:\\s*\\d+)?$`) })
       .click();
     if (name === "Мир") {
-      await expect(page.locator("#tutorial-progress")).toHaveText("1 / 6");
-      await page.getByRole("button", { name: "Пропустить", exact: true }).click();
+      await expect(page.locator("#tutorial-progress")).toHaveText("1 / 7");
+      await page
+        .getByRole("button", { name: "Пропустить", exact: true })
+        .click();
     }
     if (name === "Герой") await changeEquipmentFromHero(page);
     await noOverflow(page);
@@ -398,6 +582,7 @@ test("hero, battle, saved reload and touch-readable tournament rules", async ({
   await dialog.getByRole("button", { name: "Понятно" }).click();
   await expect(rules).toBeFocused();
   const navigation = page.getByRole("navigation", { name: "Разделы игры" });
+  await importProgressedCampaign(page, 5, true);
   for (const [name, heading] of [
     ["Герой", "Ваш герой"],
     ["Снаряжение", "Инвентарь"],
@@ -412,8 +597,10 @@ test("hero, battle, saved reload and touch-readable tournament rules", async ({
       page.getByRole("heading", { name: heading, exact: true }),
     ).toBeVisible();
     if (name === "Мир") {
-      await expect(page.locator("#tutorial-progress")).toHaveText("1 / 6");
-      await page.getByRole("button", { name: "Пропустить", exact: true }).click();
+      await expect(page.locator("#tutorial-progress")).toHaveText("1 / 7");
+      await page
+        .getByRole("button", { name: "Пропустить", exact: true })
+        .click();
     }
     if (name === "Герой") await changeEquipmentFromHero(page);
     await noOverflow(page);
@@ -443,8 +630,11 @@ test("battle preparation, pause and reload preserve the fight until the player c
   await expect(battle.getByText("ХОД 0", { exact: true })).toBeVisible();
   const frame = page.locator(".react-battle-dialog .react-modal-paper");
   const before = await frame.boundingBox();
-  const combatants = await battle.locator(".combatant").evaluateAll((elements) =>
-    elements.map((element) => element.getBoundingClientRect().height));
+  const combatants = await battle
+    .locator(".combatant")
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getBoundingClientRect().height),
+    );
   expect(combatants[0]).toBe(combatants[1]);
   await battle.getByRole("button", { name: "Настройки боя" }).click();
   const settings = page.getByRole("dialog", { name: "Настройки", exact: true });
@@ -493,4 +683,67 @@ test("battle preparation, pause and reload preserve the fight until the player c
   await expect(day).toHaveText("2");
   await page.reload();
   await expect(day).toHaveText("2");
+});
+
+test("campaign navigation expands by arena without nemesis content", async ({
+  page,
+}, testInfo) => {
+  await createHero(page);
+  const navigation = page.getByRole("navigation", { name: "Разделы игры" });
+  await expect(page.locator(".nav-primary button")).toHaveText([
+    /Карта/,
+    /Герой/,
+    /Настройки/,
+  ]);
+  await expect(page.locator(".map-shortcuts button")).toHaveText([
+    /Дуэли/,
+    /Турниры/,
+  ]);
+  await expect(page.locator(".duel-route .activity-card")).toHaveCount(1);
+  await page.goto("./#/shop");
+  await expect(
+    page.getByRole("heading", { name: "Карта окрестностей" }),
+  ).toBeVisible();
+  await noOverflow(page);
+  await accessible(page);
+  await page.screenshot({
+    path: testInfo.outputPath("campaign-opening.png"),
+    fullPage: true,
+  });
+  for (const [stage, present, absent] of [
+    [1, ["Снаряжение", "Лавка"], ["Мир", "Рейтинги"]],
+    [2, ["Мир"], ["Рейтинги"]],
+    [3, ["Рейтинги"], []],
+  ] as const) {
+    await importProgressedCampaign(page, stage);
+    for (const name of present)
+      await expect(
+        navigation.getByRole("button", { name, exact: true }),
+      ).toBeVisible();
+    for (const name of absent)
+      await expect(
+        navigation.getByRole("button", { name, exact: true }),
+      ).toHaveCount(0);
+    await navigation
+      .getByRole("button", { name: "Снаряжение", exact: true })
+      .click();
+    await expect(
+      navigation.getByRole("button", { name: "Кузница", exact: true }),
+    ).toBeVisible();
+    await expect(
+      navigation.getByRole("button", { name: "Наследие", exact: true }),
+    ).toHaveCount(stage >= 2 ? 1 : 0);
+    await expect(page.locator(".item-card.champion").first()).toBeVisible();
+    await noOverflow(page);
+    await accessible(page);
+  }
+  await navigation.getByRole("button", { name: "Герой", exact: true }).click();
+  await expect(page.locator(".hero-background")).toContainText("Должник");
+  await expect(page.getByText(/заклятый|заклятым|заклятого/i)).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(".hero-background")).toContainText("Должник");
+  await page.screenshot({
+    path: testInfo.outputPath("campaign-progress.png"),
+    fullPage: true,
+  });
 });

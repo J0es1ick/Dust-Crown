@@ -136,7 +136,9 @@ export function createItem(
       (!options.templateId || template.id === options.templateId),
   );
   const template = random.pick(
-    candidates.length > 0 ? candidates : ITEM_TEMPLATES,
+    candidates.length > 0
+      ? candidates
+      : ITEM_TEMPLATES.filter((item) => !item.id.startsWith("champion-")),
   );
   const rarity = options.rarity ?? rollRarity(options.minimumRarity, random);
   const multiplier = rarityMultipliers[rarity];

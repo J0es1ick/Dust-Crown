@@ -1,3 +1,4 @@
+import type { HeroBackground } from "../../catalogs/ChampionCatalog";
 import type { IEquipment } from "../../equipment/IEquipment";
 import type { RandomSnapshot } from "./RandomSource";
 import type { StructuredWorldEventPayload } from "../world/WorldEvents";
@@ -256,6 +257,8 @@ export interface HeroAppearance {
 }
 
 export interface HeroProfile {
+  background?: HeroBackground;
+  championArenaIds?: string[];
   id: "hero";
   name: string;
   classId: HeroClass;

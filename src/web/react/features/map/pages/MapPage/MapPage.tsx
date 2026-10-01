@@ -1,3 +1,8 @@
+import {
+  campaignStage,
+  campaignMapSectionAvailable,
+} from "../../../../../../gameplay/progression/CampaignProgression";
+import { CAMPAIGN_STAGES } from "../../../../../../catalogs/ChampionCatalog";
 import { useEffect, useState } from "react";
 import { ARENAS, DUNGEONS } from "../../../../../../catalogs/WorldCatalog";
 import { useAppSelector, useGame } from "../../../../app/state/GameContext";
@@ -22,6 +27,7 @@ import "../../styles/components.css";
 
 export function MapPage() {
   const { game } = useGame();
+  const stage = campaignStage(game.save);
   const { page, shortcuts } = useMapStickyOffsets();
   const navigation = useAppSelector((state) => state.navigation);
   const requestedSection =
@@ -32,7 +38,9 @@ export function MapPage() {
     useState<MapSectionId>("duels-section");
   const requested = requestedSection ?? selectedSection;
   const activeSection =
-    requested === "endgame-section" && !game.isFeatureUnlocked("crown-league")
+    (requested === "endgame-section" &&
+      !game.isFeatureUnlocked("crown-league")) ||
+    !campaignMapSectionAvailable(requested, game.save)
       ? "tournaments-section"
       : requested;
 
@@ -53,9 +61,12 @@ export function MapPage() {
         copy="Запишитесь заранее и займите место в сетке минимум из восьми бойцов."
       >
         <div className="activity-route arena-route" id="arena-route">
-          {ARENAS.map((arena, index) => (
-            <ActivityCard key={arena.id} activity={arena} index={index} />
-          ))}
+          {ARENAS.map(
+            (arena, index) =>
+              index <= stage && (
+                <ActivityCard key={arena.id} activity={arena} index={index} />
+              ),
+          )}
         </div>
       </RouteSection>
     ) : activeSection === "dungeons-section" ? (
@@ -67,9 +78,16 @@ export function MapPage() {
         className="dungeons-section"
       >
         <div className="activity-route dungeon-route" id="dungeon-route">
-          {DUNGEONS.map((dungeon, index) => (
-            <ActivityCard key={dungeon.id} activity={dungeon} index={index} />
-          ))}
+          {DUNGEONS.map(
+            (dungeon, index) =>
+              dungeon.requiredArena <= stage && (
+                <ActivityCard
+                  key={dungeon.id}
+                  activity={dungeon}
+                  index={index}
+                />
+              ),
+          )}
         </div>
       </RouteSection>
     ) : (
@@ -85,18 +103,27 @@ export function MapPage() {
     );
 
   return (
-    <div className="react-map-page" ref={page}>
-      <PageHeading eyebrow="ВЫБОР СЛЕДУЮЩЕГО ПУТИ" title="Карта окрестностей">
+    <div className="react-map-page campaign-map" data-stage={stage} ref={page}>
+      <PageHeading
+        eyebrow={`АРЕНА ${stage + 1} ИЗ 6 · ${CAMPAIGN_STAGES[stage].title}`}
+        title="Карта окрестностей"
+      >
         <p>
-          Вы выбираете место и снаряжение. Герой сражается автоматически или по
-          вашим командам.
+          Дуэли готовят героя к турнирам. Чемпионства открывают следующую арену
+          и новые возможности.
         </p>
       </PageHeading>
       <NextGoalCard />
-      <MapUtilities />
+      {stage < 5 && (
+        <p className="campaign-unlock">
+          Следующая арена:{" "}
+          {CAMPAIGN_STAGES[stage].opens.toLocaleLowerCase("ru-RU")}.
+        </p>
+      )}
+      {stage >= 2 && <MapUtilities />}
       <MapShortcuts navigationRef={shortcuts} activeId={activeSection} />
       <div className="map-layout">
-        <HeroSummaryCard />
+        {stage >= 3 && <HeroSummaryCard />}
         <div
           id="map-activity-panel"
           className="route-board map-tab-panel"
@@ -104,8 +131,11 @@ export function MapPage() {
           aria-label="Выбранное направление"
           key={activeSection}
         >
-          <Training />
           {activity}
+          <details className="campaign-training">
+            <summary>Подготовка и ожидание турнира</summary>
+            <Training />
+          </details>
         </div>
       </div>
     </div>

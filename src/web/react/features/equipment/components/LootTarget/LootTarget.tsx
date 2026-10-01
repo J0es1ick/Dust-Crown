@@ -27,7 +27,8 @@ export function LootTarget() {
   const targetSet = EQUIPMENT_SETS.find((set) => set.id === target?.setId);
   const validSets = EQUIPMENT_SETS.filter(
     (set) =>
-      set.classes === "all" || set.classes.includes(game.save.hero.classId),
+      !set.id.startsWith("champion-") &&
+      (set.classes === "all" || set.classes.includes(game.save.hero.classId)),
   );
   const effectiveSet = validSets.some((set) => set.id === setId) ? setId : "";
   const reset = () => {

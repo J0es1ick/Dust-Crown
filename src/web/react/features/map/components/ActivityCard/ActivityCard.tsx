@@ -1,3 +1,9 @@
+import {
+  CHAMPION_NAMES,
+  CHAMPION_EFFECTS,
+  CAMPAIGN_STAGES,
+} from "../../../../../../catalogs/ChampionCatalog";
+import { SLOT_LABELS } from "../../../../../../catalogs/WorldCatalog";
 import { useState, type ReactNode } from "react";
 import type {
   ArenaDefinition,
@@ -126,6 +132,20 @@ function TournamentCard({
         <div className="activity-levels">
           Сетка: {arena.participants} · каждые {arena.tournamentInterval} дн. ·
           приз {arena.rewardGold} ¤
+        </div>
+        <div className="campaign-prize">
+          <strong>
+            {(game.save.hero.championArenaIds ?? []).includes(arena.id)
+              ? "Алый трофей получен"
+              : "За первое чемпионство"}
+            : {SLOT_LABELS[CAMPAIGN_STAGES[index].slot]} ·{" "}
+            {CHAMPION_NAMES[game.save.hero.classId]}
+          </strong>
+          <small>
+            {CHAMPION_EFFECTS[game.save.hero.classId]} Трофеи растут после
+            первого чемпионства на новой арене. Повторные победы приносят
+            обычную добычу.
+          </small>
         </div>
       </ActivitySurface>
       {showRules && (

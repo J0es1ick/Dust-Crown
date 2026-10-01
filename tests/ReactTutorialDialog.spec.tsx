@@ -1,6 +1,5 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react/pure";
 import { WorldGame } from "../src/gameplay/core/WorldGame";
-import { baseTutorialSteps } from "../src/web/react/features/onboarding/TutorialDialog/TutorialCatalog";
 import { DialogVisibility } from "../src/web/react/shared/ui/common";
 import { TutorialDialog } from "../src/web/react/features/onboarding/TutorialDialog/TutorialDialog";
 import { GameProvider, useAppState } from "../src/web/react/app/state/GameContext";
@@ -39,6 +38,8 @@ describe("interactive React tutorial", () => {
     const globals = {
       window: dom.window,
       document: dom.window.document,
+      location: dom.window.location,
+      history: dom.window.history,
       HTMLElement: dom.window.HTMLElement,
       Element: dom.window.Element,
       Node: dom.window.Node,
@@ -135,6 +136,8 @@ describe("interactive React tutorial", () => {
   }
 
   test("skipping restores the original page and scroll, marks completion and removes observers", () => {
+    game.save.hero.highestArena = 1;
+    store.setPage("shop");
     store.openDialog({ kind: "tutorial", firstVisit: true });
     const ui = render(
       <GameProvider store={store}>
@@ -180,22 +183,18 @@ describe("interactive React tutorial", () => {
         <Shell />
       </GameProvider>,
     );
-    const expected = baseTutorialSteps.filter(
-      (step) => !step.feature || game.isFeatureUnlocked(step.feature),
-    );
-    expect(document.getElementById("tutorial-progress")!.textContent).toBe(
-      `1 / ${expected.length}`,
-    );
-    expect(
-      expected.some(
-        (step) => step.page === "contracts" || step.page === "legacy",
-      ),
-    ).toBe(false);
+    expect(document.getElementById("tutorial-progress")!.textContent).toBe("1 / 10");
+    for (let step = 0; step < 9; step++) {
+      fireEvent.click(ui.getByRole("button", { name: "Далее" }));
+      expect(["map", "hero", "settings"]).toContain(store.getSnapshot().page);
+    }
     fireEvent.click(ui.getByRole("button", { name: "Завершить обучение" }));
     expect(store.getSnapshot().dialogs).toHaveLength(0);
   });
 
   test("contextual tutorials can finish and remain acknowledged in a restored save", () => {
+    game.save.hero.highestArena = 2;
+    store.setPage("shop");
     store.openDialog({ kind: "tutorial", id: "adaptation" });
     const ui = render(
       <GameProvider store={store}>

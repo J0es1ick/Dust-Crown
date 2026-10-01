@@ -149,3 +149,59 @@ describe("числовые бонусы комплектов из каталог
     },
   );
 });
+
+describe("классовые дары алого комплекта", () => {
+  const { BattleSession } =
+    require("../src/gameplay/combat/AdvancedBattle") as typeof import("../src/gameplay/combat/AdvancedBattle");
+  const { SeededRandom } =
+    require("../src/gameplay/core/RandomSource") as typeof import("../src/gameplay/core/RandomSource");
+
+  test.each(["Archer", "Gunsmith"] as HeroClass[])(
+    "%s: третий удар критический и счётчик сохраняется",
+    (classId) => {
+      const { hero, enemy } = bareFighters(classId);
+      hero.level = 10;
+      enemy.level = 10;
+      equipStatlessSet(hero, `champion-${classId}`, 1);
+      const initial = new BattleSession(hero, enemy, {
+        randomSource: new SeededRandom(456),
+      }).snapshot();
+      initial.hero.crit = 0;
+      initial.enemy.maxHealth = initial.enemy.health = 10000;
+      initial.hero.maxHealth = initial.hero.health = 10000;
+      let session = new BattleSession(initial);
+      while (session.snapshot().hero.attackCounter < 2)
+        session.step({ type: "basic" });
+      const checkpoint = JSON.parse(JSON.stringify(session.snapshot()));
+      const uninterrupted = session.runAutomatic();
+      session = new BattleSession(checkpoint);
+      expect(session.runAutomatic()).toEqual(uninterrupted);
+      const guaranteed = uninterrupted.turns.filter(
+        (turn) =>
+          turn.actorId === "hero" && turn.detail.includes("алый прицел"),
+      );
+      expect(guaranteed.length).toBeGreaterThan(0);
+      expect(guaranteed.every((turn) => turn.critical)).toBe(true);
+    },
+  );
+
+  test("алое восстановление не обходит запрет лечения", () => {
+    const { hero, enemy } = bareFighters("Swordsman");
+    hero.level = enemy.level = 10;
+    equipStatlessSet(hero, "champion-Swordsman", 4);
+    const initial = new BattleSession(hero, enemy, {
+      randomSource: new SeededRandom(457),
+    }).snapshot();
+    initial.hero.health = Math.floor(initial.hero.maxHealth / 2);
+    initial.enemy.maxHealth = initial.enemy.health = 10000;
+    const healed = new BattleSession(initial).runAutomatic();
+    expect(healed.turns.some((turn) => turn.detail.includes("алый дар"))).toBe(
+      true,
+    );
+    initial.hero.disableHealing = true;
+    const blocked = new BattleSession(initial).runAutomatic();
+    expect(blocked.turns.some((turn) => turn.detail.includes("алый дар"))).toBe(
+      false,
+    );
+  });
+});

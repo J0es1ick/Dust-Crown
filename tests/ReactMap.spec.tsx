@@ -56,6 +56,7 @@ describe("React world map", () => {
   }
 
   test("quick navigation reports reserved events today and the correct targets", () => {
+    game.save.hero.highestArena = 5;
     game.save.tournamentRegistrations[ARENAS[0].id] = game.save.worldDay;
     game.save.tournamentRegistrations["crown-league"] = game.save.worldDay;
     const shortcuts = mapShortcuts(game);
@@ -79,7 +80,7 @@ describe("React world map", () => {
     });
   });
 
-  test("map directions switch in place while keeping every activity available", () => {
+  test("map directions switch in place while keeping future arenas hidden", () => {
     const ui = render(
       <GameProvider store={store}>
         <MapPage />
@@ -87,23 +88,22 @@ describe("React world map", () => {
     );
     expect(ui.queryByRole("button", { name: /Кузница/ })).toBeNull();
     expect(ui.queryByRole("button", { name: /Лига короны/ })).toBeNull();
-    expect(
-      (ui.getByRole("button", { name: /Контракты/ }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    expect(ui.queryByRole("button", { name: /Контракты/ })).toBeNull();
+    fireEvent.click(ui.getByText("Подготовка и ожидание турнира"));
     expect(ui.getByRole("heading", { name: "Дуэльный круг" })).toBeTruthy();
     expect(ui.getByRole("heading", { name: "Тренировка" })).toBeTruthy();
     fireEvent.click(ui.getByRole("button", { name: /Турниры/ }));
     expect(
       ui.getByRole("heading", { name: "Календарь турниров" }),
     ).toBeTruthy();
-    ARENAS.forEach((arena) =>
+    ARENAS.slice(0, 1).forEach((arena) =>
       expect(
         ui.getByRole("heading", { name: arena.name, level: 3 }),
       ).toBeTruthy(),
     );
     const conditionLinks = ui.getAllByText("Условия");
-    expect(conditionLinks).toHaveLength(ARENAS.length);
+    expect(conditionLinks).toHaveLength(1);
+    ARENAS.slice(1).forEach(arena => expect(ui.queryByRole("heading", {name: arena.name, level: 3})).toBeNull());
     conditionLinks[0].focus();
     fireEvent.click(conditionLinks[0]);
     const dialog = ui.getByRole("dialog", {
@@ -123,11 +123,13 @@ describe("React world map", () => {
     expect(ui.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(conditionLinks[0]);
     expect(ui.queryByText("АРЕНОЙ УПРАВЛЯЕТ")).toBeNull();
+    fireEvent.click(ui.getByText("Подготовка и ожидание турнира"));
     expect(ui.getByRole("heading", { name: "Тренировка" })).toBeTruthy();
   });
 
   test("quick actions open forge and unlocked contracts", () => {
     game.save.hero.arenaWins[0] = 1;
+    game.save.hero.highestArena = 2;
     const ui = render(
       <GameProvider store={store}>
         <MapPage />

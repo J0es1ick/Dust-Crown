@@ -1,3 +1,5 @@
+import { campaignStage } from "../../../../gameplay/progression/CampaignProgression";
+import "./CampaignLayout.css";
 import { Suspense, lazy, useEffect } from "react";
 import { GlossaryProvider } from "../GlossaryProvider/GlossaryProvider";
 import { Header } from "../Header/Header";
@@ -42,7 +44,11 @@ export function WorldShell() {
 
   useEffect(() => {
     if (
-      !isWorldPageAvailable(page, (feature) => game.isFeatureUnlocked(feature))
+      !isWorldPageAvailable(
+        page,
+        (feature) => game.isFeatureUnlocked(feature),
+        game.save,
+      )
     )
       store.setPage("map");
   }, [page, game, revision, store]);
@@ -55,7 +61,7 @@ export function WorldShell() {
         !game.hasSeenTutorial("world")
       )
         store.openDialog({ kind: "tutorial", id: "world" });
-      else if (game.pendingNarrativeEvent())
+      else if (campaignStage(game.save) >= 2 && game.pendingNarrativeEvent())
         store.openDialog({ kind: "narrative" });
       else store.presentNextTutorial();
     }, 500);
@@ -63,7 +69,7 @@ export function WorldShell() {
   }, [game, revision, page, dialogs.length, store]);
 
   return (
-    <>
+    <div className="campaign-layout">
       <Header />
       <main className="game-shell">
         <Suspense fallback={<LoadingScreen />}>
@@ -77,6 +83,6 @@ export function WorldShell() {
       <TournamentReminder />
       <NotificationDeck />
       <GlossaryProvider />
-    </>
+    </div>
   );
 }

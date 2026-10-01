@@ -1,3 +1,4 @@
+import { campaignMapSectionAvailable } from "../../../../../../gameplay/progression/CampaignProgression";
 import type { Ref } from "react";
 import {
   ARENAS,
@@ -54,7 +55,7 @@ export function mapShortcuts(game: WorldGame): MapShortcut[] {
       game.availability(boss).unlocked,
   ).length;
 
-  return [
+  const shortcuts: MapShortcut[] = [
     {
       id: "duels-section",
       name: "Дуэли",
@@ -90,6 +91,9 @@ export function mapShortcuts(game: WorldGame): MapShortcut[] {
         ]
       : []),
   ];
+  return shortcuts.filter((shortcut) =>
+    campaignMapSectionAvailable(shortcut.id, game.save),
+  );
 }
 
 export function MapShortcuts({

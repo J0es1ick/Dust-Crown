@@ -1,3 +1,5 @@
+import { HERO_BACKGROUNDS } from "../../../../../../catalogs/ChampionCatalog";
+import { campaignStage } from "../../../../../../gameplay/progression/CampaignProgression";
 import { useMemo, useState } from "react";
 import {
   CLASS_DEFINITIONS,
@@ -146,16 +148,18 @@ function HeroClassSummary({ onChange }: { onChange: () => void }) {
         <strong>{sentenceCase(definition.epithet)}</strong>
         <p>{definition.passive}</p>
       </div>
-      <div className="hero-class-action">
-        <button type="button" className="button" onClick={onChange}>
-          ⇄ Сменить класс
-        </button>
-        <small>
-          {availability.unlocked
-            ? `Смен класса: ${hero.classChanges}`
-            : availability.reason}
-        </small>
-      </div>
+      {campaignStage(game.save) >= 3 && (
+        <div className="hero-class-action">
+          <button type="button" className="button" onClick={onChange}>
+            ⇄ Сменить класс
+          </button>
+          <small>
+            {availability.unlocked
+              ? `Смен класса: ${hero.classChanges}`
+              : availability.reason}
+          </small>
+        </div>
+      )}
     </section>
   );
 }
@@ -186,6 +190,21 @@ export function HeroPage({ section = "equipment" }: { section?: HeroSection }) {
       {section === "equipment" && (
         <>
           <HeroClassSummary onChange={() => setClassChangeOpen(true)} />
+          {hero.background && (
+            <p className="hero-background">
+              <strong>
+                {
+                  HERO_BACKGROUNDS.find((entry) => entry.id === hero.background)
+                    ?.name
+                }
+                .
+              </strong>{" "}
+              {
+                HERO_BACKGROUNDS.find((entry) => entry.id === hero.background)
+                  ?.description
+              }
+            </p>
+          )}
           {classChangeOpen && (
             <ClassChangeDialog onClose={() => setClassChangeOpen(false)} />
           )}

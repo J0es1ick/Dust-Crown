@@ -971,3 +971,16 @@ body.ui-modal-open {
   color: var(--muted);
   text-align: center;
 }
+
+.item-card.champion {
+  border-color: var(--text-danger);
+}
+.item-card.champion .rarity-label,
+.item-card.champion h3 {
+  color: var(--text-danger);
+}
+.champion-gift {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+}

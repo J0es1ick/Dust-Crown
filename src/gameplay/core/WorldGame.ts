@@ -1,3 +1,5 @@
+import type { HeroBackground } from "../../catalogs/ChampionCatalog";
+import { restoreChampionPrizes } from "../equipment/ChampionEquipment";
 import {
   ARENAS,
   DUEL_BOSSES,
@@ -222,6 +224,7 @@ export class WorldGame {
   private readonly npcSimulation: NpcSimulationService;
   private featureChanges: FighterFeatureChange[] = [];
   private automaticLegendDefense?: BattleReport;
+  private deferredChampionPrizes = false;
 
   private constructor(save: GameSave) {
     this.save = save;
@@ -414,6 +417,7 @@ export class WorldGame {
     name: string,
     classId: HeroClass,
     now = Date.now(),
+    background?: HeroBackground,
   ): WorldGame {
     const tournamentRuleSeed = Math.max(1, now % 999_999);
     const starterRandom = new SeededRandom(`${tournamentRuleSeed}:loot`);
@@ -542,6 +546,7 @@ export class WorldGame {
     game.syncCrownSet();
     game.ensurePopulations(true);
     game.rotateShop();
+    if (background) hero.background = background;
     game.event("system", `${hero.name} начал путь в Нижнем городе.`);
     return game;
   }
@@ -566,6 +571,8 @@ export class WorldGame {
     game.recalculateHeroRating();
     game.syncFeatureUnlocks();
     game.refreshContracts(false);
+    restoreChampionPrizes(game.save);
+    game.deferredChampionPrizes = Boolean(game.save.pendingBattle);
     return game;
   }
 
@@ -1479,8 +1486,16 @@ export class WorldGame {
     return { turn, finished: session.isFinished, pendingBattle: pending };
   }
 
+  private restoreDeferredChampionPrizes(): void {
+    if (!this.deferredChampionPrizes || this.save.pendingBattle) return;
+    restoreChampionPrizes(this.save);
+    this.deferredChampionPrizes = false;
+  }
+
   public finalizePendingBattle(): PendingBattleFinalization {
-    return this.battleFinalization.finalizePendingBattle();
+    const result = this.battleFinalization.finalizePendingBattle();
+    this.restoreDeferredChampionPrizes();
+    return result;
   }
 
   public abortPendingBattle(): PendingBattleFinalization | undefined {
@@ -1491,6 +1506,7 @@ export class WorldGame {
       !pending.tournament?.heroBattles.length
     ) {
       this.save.pendingBattle = undefined;
+      this.restoreDeferredChampionPrizes();
       return undefined;
     }
     const session = new BattleSession(pending.session);

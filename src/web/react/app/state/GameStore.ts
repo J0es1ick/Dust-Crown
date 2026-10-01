@@ -1,3 +1,5 @@
+import { campaignStage } from "../../../../gameplay/progression/CampaignProgression";
+import type { HeroBackground } from "../../../../catalogs/ChampionCatalog";
 import { WorldGame } from "../../../../gameplay/core/WorldGame";
 import {
   parseWorldSave,
@@ -266,7 +268,7 @@ export class GameStore {
       });
       this.persist();
       this.publish();
-      if (elapsed > 0)
+      if (elapsed > 0 && campaignStage(game.save) >= 2)
         this.notify({
           eyebrow: "ПОКА ВАС НЕ БЫЛО",
           title: `Мир прожил ещё ${elapsed} дн.`,
@@ -309,12 +311,18 @@ export class GameStore {
     name: string,
     classId: HeroClass,
     hairStyle: 0 | 1 | 2,
+    background?: HeroBackground,
   ): void {
     if (this.disposed) return;
     try {
       if (name.trim().length < 2)
         throw new Error("Имя должно состоять минимум из двух символов.");
-      const game = WorldGame.create(name.trim(), classId);
+      const game = WorldGame.create(
+        name.trim(),
+        classId,
+        Date.now(),
+        background,
+      );
       game.save.hero.appearance = { hairStyle, faceStyle: 0 };
       this.attach(game);
       this.clearRankingSnapshots();
@@ -468,8 +476,10 @@ export class GameStore {
     if (this.disposed) return;
     if (
       this.game &&
-      !isWorldPageAvailable(page, (feature) =>
-        this.game!.isFeatureUnlocked(feature),
+      !isWorldPageAvailable(
+        page,
+        (feature) => this.game!.isFeatureUnlocked(feature),
+        this.game.save,
       )
     )
       return;
@@ -487,8 +497,10 @@ export class GameStore {
   public setPage = (page: WorldPageId): void => {
     if (
       !this.game ||
-      isWorldPageAvailable(page, (feature) =>
-        this.game!.isFeatureUnlocked(feature),
+      isWorldPageAvailable(
+        page,
+        (feature) => this.game!.isFeatureUnlocked(feature),
+        this.game.save,
       )
     )
       this.update({ page, navigation: null });
@@ -541,46 +553,51 @@ export class GameStore {
       ? []
       : this.game.consumeFeatureUnlocks();
     this.enqueueSave();
-    this.seasons.collect(this.game.save).forEach((notice) =>
-      this.notify({
-        variant: "season",
-        replaceKey: `season-${notice.kind}`,
-        eyebrow:
-          notice.kind === "world"
-            ? `ЭПОХА ${notice.cycle} · СЕЗОН ${notice.number}`
-            : "СМЕНА СЕЗОНА · ЭЛИТА",
-        title:
-          notice.kind === "world"
-            ? `Новый сезон: ${notice.title}`
-            : notice.title,
-        description: notice.description,
-        symbol: "◈",
-        tone: "legendary",
-        sound: "reputation",
-        duration: 7000,
-        action: {
-          label: "Узнать изменения",
-          run: () => this.openDialog({ kind: "season", notice }),
-        },
-      }),
-    );
-    unlocks.forEach((unlock) => {
-      this.queueTutorial(unlock.tutorialId);
-      this.notify({
-        eyebrow: `НОВАЯ ВОЗМОЖНОСТЬ · ДЕНЬ ${unlock.day}`,
-        title: unlock.title,
-        description: unlock.description,
-        symbol: "✦",
-        tone: "legendary",
-        sound: "reputation",
-        duration: 8000,
-        action: {
-          label: "Открыть обучение",
-          run: () =>
-            this.openDialog({ kind: "tutorial", id: unlock.tutorialId }),
-        },
+    this.seasons
+      .collect(this.game.save)
+      .filter(() => campaignStage(this.game!.save) >= 2)
+      .forEach((notice) =>
+        this.notify({
+          variant: "season",
+          replaceKey: `season-${notice.kind}`,
+          eyebrow:
+            notice.kind === "world"
+              ? `ЭПОХА ${notice.cycle} · СЕЗОН ${notice.number}`
+              : "СМЕНА СЕЗОНА · ЭЛИТА",
+          title:
+            notice.kind === "world"
+              ? `Новый сезон: ${notice.title}`
+              : notice.title,
+          description: notice.description,
+          symbol: "◈",
+          tone: "legendary",
+          sound: "reputation",
+          duration: 7000,
+          action: {
+            label: "Узнать изменения",
+            run: () => this.openDialog({ kind: "season", notice }),
+          },
+        }),
+      );
+    unlocks
+      .filter((unlock) => this.tutorialAvailable(unlock.tutorialId))
+      .forEach((unlock) => {
+        this.queueTutorial(unlock.tutorialId);
+        this.notify({
+          eyebrow: `НОВАЯ ВОЗМОЖНОСТЬ · ДЕНЬ ${unlock.day}`,
+          title: unlock.title,
+          description: unlock.description,
+          symbol: "✦",
+          tone: "legendary",
+          sound: "reputation",
+          duration: 8000,
+          action: {
+            label: "Открыть обучение",
+            run: () =>
+              this.openDialog({ kind: "tutorial", id: unlock.tutorialId }),
+          },
+        });
       });
-    });
     const defense = this.game.consumeAutomaticLegendDefense();
     if (defense)
       this.notify({
@@ -715,7 +732,25 @@ export class GameStore {
     });
   };
 
+  private tutorialAvailable(id: ContextualTutorialId): boolean {
+    if (!this.game) return false;
+    const pages: Partial<Record<ContextualTutorialId, WorldPageId>> = {
+      contracts: "contracts",
+      forge: "forge",
+      "equipment-legacy": "legacy",
+      "crown-league": "elite",
+      world: "chronicle",
+      adaptation: "career",
+    };
+    return isWorldPageAvailable(
+      pages[id] ?? "map",
+      (feature) => this.game!.isFeatureUnlocked(feature),
+      this.game.save,
+    );
+  }
+
   public queueTutorial(id: ContextualTutorialId): void {
+    if (!this.tutorialAvailable(id)) return;
     if (this.disposed) return;
     if (!this.game?.hasSeenTutorial(id) && !this.tutorialQueue.includes(id))
       this.tutorialQueue.push(id);
@@ -744,6 +779,7 @@ export class GameStore {
       !this.game
     )
       return;
+    this.queueAvailableTutorials();
     let id = this.tutorialQueue.shift();
     while (id && this.game.hasSeenTutorial(id)) id = this.tutorialQueue.shift();
     if (id) this.openDialog({ kind: "tutorial", id });

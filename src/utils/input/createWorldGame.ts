@@ -1,3 +1,4 @@
+import { HERO_BACKGROUNDS } from "../../catalogs/ChampionCatalog";
 import * as path from "node:path";
 
 import {
@@ -114,7 +115,13 @@ async function chooseNewHero(): Promise<WorldGame> {
   const classId =
     numberedChoice(classIds, await readAnswer("Выберите класс (1–6): ")) ??
     "Knight";
-  return WorldGame.create(name, classId);
+  HERO_BACKGROUNDS.forEach((entry, index) =>
+    console.log(`${index + 1}. ${entry.name}: ${entry.description}`),
+  );
+  const background =
+    numberedChoice([...HERO_BACKGROUNDS], await readAnswer("Предыстория: ")) ??
+    HERO_BACKGROUNDS[0];
+  return WorldGame.create(name, classId, Date.now(), background.id);
 }
 
 async function chooseCampaign(

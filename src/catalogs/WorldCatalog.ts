@@ -1,3 +1,4 @@
+import { CHAMPION_SETS, CHAMPION_TEMPLATES } from "./ChampionCatalog";
 import {
   ArenaDefinition,
   BossDefinition,
@@ -2245,6 +2246,7 @@ export const ITEM_TEMPLATES: ItemTemplate[] = [
   },
   ...additionalItemTemplates,
   ...FACTION_ITEM_TEMPLATES,
+  ...CHAMPION_TEMPLATES,
 ];
 
 const statBonusLabels: Record<keyof Stats, string> = {
@@ -2415,6 +2417,7 @@ export const EQUIPMENT_SETS: EquipmentSetDefinition[] = [
     ],
   })),
   ...FACTION_EQUIPMENT_SETS,
+  ...CHAMPION_SETS,
 ];
 
 export function addStats(base: Stats, bonus: Partial<Stats>): Stats {

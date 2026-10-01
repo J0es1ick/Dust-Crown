@@ -1,3 +1,4 @@
+import { claimChampionPrize } from "../equipment/ChampionEquipment";
 import { ARENAS, ENDGAME_ACTIVITIES } from "../../catalogs/WorldCatalog";
 import { TOURNAMENT_RULES } from "../../catalogs/WorldExpansionCatalog";
 import { ItemCreationOptions } from "../../factories/ItemFactory";
@@ -543,10 +544,12 @@ export class TournamentService {
         this.save.factionControl?.arenaControllers[arena.id] === "red-ledger"
           ? improveMinimumRarity(baseMinimum, 1)
           : baseMinimum;
-      item = this.hooks.createRewardItem(
-        Math.min(this.save.hero.level + 2, arena.enemyLevel[1] + 1),
-        { classId: this.save.hero.classId, minimumRarity: minimum },
-      );
+      item =
+        claimChampionPrize(this.save, arenaIndex) ??
+        this.hooks.createRewardItem(
+          Math.min(this.save.hero.level + 2, arena.enemyLevel[1] + 1),
+          { classId: this.save.hero.classId, minimumRarity: minimum },
+        );
       this.hooks.addItem(item);
       if (arenaIndex >= 2) {
         temperingMarks = arenaIndex === ARENAS.length - 1 ? 2 : 1;

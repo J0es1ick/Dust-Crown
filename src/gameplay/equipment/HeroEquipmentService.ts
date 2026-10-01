@@ -1,3 +1,4 @@
+import { attuneChampionTrophies } from "../equipment/ChampionEquipment";
 import {
   ARENAS,
   CLASS_DEFINITIONS,
@@ -208,6 +209,8 @@ export class HeroEquipmentService {
     const equippedIds = new Set(Object.values(this.save.hero.equipped));
     if (items.some((item) => equippedIds.has(item.id)))
       throw new Error("Надетый предмет нельзя разобрать.");
+    if (items.some((item) => item.templateId.startsWith("champion-")))
+      throw new Error("Трофеи чемпиона нельзя разобрать.");
     if (items.some((item) => !this.canSellItem(item)))
       throw new Error("Регалии короны нельзя разобрать.");
     if (items.some((item) => item.worldRelicId))
@@ -478,6 +481,7 @@ export class HeroEquipmentService {
     hero.gold -= CLASS_CHANGE_GOLD_COST;
     hero.temperingMarks -= CLASS_CHANGE_MARK_COST;
     hero.classId = classId;
+    attuneChampionTrophies(this.save);
     hero.classChanges += 1;
     hero.selectedSkillIds = [];
     (Object.keys(hero.equipped) as EquipmentSlot[]).forEach((slot) => {
@@ -519,6 +523,8 @@ export class HeroEquipmentService {
     if (!item) return 0;
     if (Object.values(this.save.hero.equipped).includes(itemId))
       throw new Error("Сначала снимите предмет.");
+    if (item.templateId.startsWith("champion-"))
+      throw new Error("Трофеи чемпиона нельзя продать.");
     if (!this.canSellItem(item))
       throw new Error(
         "Регалии живой короны нельзя продать, пока они принадлежат лидеру элиты.",
@@ -550,7 +556,10 @@ export class HeroEquipmentService {
         (template) => template.id,
       ),
     );
-    return !eliteRegaliaTemplateIds.has(item.templateId);
+    return (
+      !item.templateId.startsWith("champion-") &&
+      !eliteRegaliaTemplateIds.has(item.templateId)
+    );
   }
 
   public canBulkSellItem(

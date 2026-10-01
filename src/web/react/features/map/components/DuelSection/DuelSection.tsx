@@ -93,7 +93,9 @@ export function DuelSection({
         className="duel-section boss-section"
       >
         <div className="activity-route boss-route" id="boss-route">
-          {DUEL_BOSSES.map((boss) => (
+          {DUEL_BOSSES.filter(
+            (boss) => boss.requiredArena <= hero.highestArena,
+          ).map((boss) => (
             <BossCard key={boss.id} boss={boss} />
           ))}
         </div>
@@ -109,9 +111,12 @@ export function DuelSection({
       className="duel-section"
     >
       <div className="activity-route duel-route" id="duel-route">
-        {DUEL_TIERS.map((duel, index) => (
-          <DuelCard key={duel.id} duel={duel} index={index} />
-        ))}
+        {DUEL_TIERS.map(
+          (duel, index) =>
+            duel.requiredArena <= hero.highestArena && (
+              <DuelCard key={duel.id} duel={duel} index={index} />
+            ),
+        )}
       </div>
       {view === "all" && (
         <>
@@ -119,7 +124,9 @@ export function DuelSection({
             Особые противники
           </h3>
           <div className="activity-route boss-route" id="boss-route">
-            {DUEL_BOSSES.map((boss) => (
+            {DUEL_BOSSES.filter(
+              (boss) => boss.requiredArena <= hero.highestArena,
+            ).map((boss) => (
               <BossCard key={boss.id} boss={boss} />
             ))}
           </div>

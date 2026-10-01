@@ -1,0 +1,116 @@
+.campaign-layout .nav-primary {
+  display: flex;
+  flex-wrap: wrap;
+}
+.campaign-layout .nav-primary > button {
+  flex: 1 1 120px;
+}
+.campaign-layout .resources > [hidden] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .campaign-layout .hero-summary small {
+    display: none;
+  }
+  .campaign-layout .game-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  .campaign-layout .header-brand {
+    grid-row: 1;
+    grid-column: 1 / -1;
+  }
+  .campaign-layout .header-brand > small {
+    display: none;
+  }
+  .campaign-layout .hero-summary {
+    grid-row: 2;
+    grid-column: 1;
+    padding: 0;
+    border: 0;
+  }
+  .campaign-layout .hero-summary .portrait {
+    display: none;
+  }
+  .campaign-layout .hero-summary strong {
+    font-size: 14px;
+  }
+  .campaign-layout .resources {
+    grid-row: 2;
+    grid-column: 2;
+    grid-template-columns: repeat(5, auto);
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    width: auto;
+  }
+  .campaign-layout .resources > div {
+    padding-left: 5px;
+  }
+  .campaign-layout .header-actions {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+  .campaign-layout .header-actions .plain-button {
+    min-height: 36px;
+  }
+  .campaign-layout .nav-primary > button {
+    flex: 1 1 90px;
+    min-width: 0;
+  }
+  .campaign-layout .game-shell {
+    padding-top: 18px;
+  }
+}
+
+.campaign-map[data-stage="0"] .map-layout,
+.campaign-map[data-stage="1"] .map-layout,
+.campaign-map[data-stage="2"] .map-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.campaign-training {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.campaign-training summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding-block: 10px;
+}
+.campaign-prize {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  color: var(--text-danger);
+}
+.campaign-prize strong,
+.campaign-prize small {
+  display: block;
+}
+.campaign-prize small {
+  color: var(--muted);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.hero-background {
+  padding: 14px 18px;
+  border-left: 3px solid var(--text-warm);
+  background: var(--paper);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.campaign-map .activity-route > .activity-card:only-child {
+  grid-column: 1 / -1;
+}
+.campaign-map[data-stage="0"] .duel-route .activity-card {
+  min-height: 0;
+}
+.campaign-map[data-stage="0"] .duel-route .activity-card > p {
+  min-height: 0;
+}
+.campaign-unlock {
+  font-size: 13px;
+  color: var(--muted);
+  margin: -8px 0 20px;
+}

@@ -136,6 +136,7 @@ export function beginNewChronicle<T>(
   ];
   nextSave.tutorialCompleted = true;
   nextSave.seenContextualTutorialIds = [...save.seenContextualTutorialIds];
+  if (save.hero.background) nextSave.hero.background = "heir";
   nextSave.hero.appearance = { ...save.hero.appearance };
   nextSave.hero.autoEquipBest = save.hero.autoEquipBest;
   nextSave.hero.autoSelectSkills = save.hero.autoSelectSkills;

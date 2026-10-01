@@ -19,7 +19,12 @@ describe("equipment operations", () => {
     const before = JSON.stringify(game.save.hero.inventory);
 
     game.save.hero.inventory.forEach((item, index) => {
-      expect(game.canSellItem(Object.freeze({ templateId: item.templateId }))).toBe(!ITEM_TEMPLATES[index].exclusiveToElite);
+      expect(
+        game.canSellItem(Object.freeze({ templateId: item.templateId })),
+      ).toBe(
+        !ITEM_TEMPLATES[index].exclusiveToElite &&
+          !item.templateId.startsWith("champion-"),
+      );
       expect(game.canSell(item.id)).toBe(game.canSellItem(item));
     });
 

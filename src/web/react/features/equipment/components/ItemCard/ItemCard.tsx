@@ -1,3 +1,4 @@
+import { CHAMPION_EFFECTS } from "../../../../../../catalogs/ChampionCatalog";
 import type { EquipmentItem } from "../../../../../../gameplay/core/WorldTypes";
 import {
   RARITY_LABELS,
@@ -27,6 +28,7 @@ export function ItemCard({
 }) {
   const { game, act, openDialog, notify } = useGame();
   const hero = game.save.hero;
+  const champion = item.templateId.startsWith("champion-");
   const equipped = hero.equipped[item.slot] === item.id;
   const compatible = isCompatible(item, hero.classId);
   const protectedItem = !game.canSellItem(item);
@@ -49,7 +51,7 @@ export function ItemCard({
   };
   return (
     <article
-      className={`item-card ${item.rarity}${sold ? " sold" : ""}${equipped ? " equipped" : ""}`}
+      className={`item-card ${item.rarity}${champion ? " champion" : ""}${sold ? " sold" : ""}${equipped ? " equipped" : ""}`}
       data-item-id={item.id}
     >
       <div className="item-head">
@@ -58,7 +60,7 @@ export function ItemCard({
           {equipped ? " · НАДЕТО" : ""}
         </span>
         <span className="rarity-label" data-term="rarity">
-          {RARITY_LABELS[item.rarity]}
+          {champion ? "Алый трофей" : RARITY_LABELS[item.rarity]}
         </span>
       </div>
       <EquipmentArt item={item} slot={item.slot} classId={hero.classId} />
@@ -73,6 +75,17 @@ export function ItemCard({
         {legacy ? ` · наследие ${item.relicTier ?? 0}/3` : ""}
       </small>
       <p className="item-stats">{statsText(item.stats)}</p>
+      {champion && (
+        <p className="champion-gift">
+          {
+            CHAMPION_EFFECTS[
+              item.allowedClasses === "all"
+                ? hero.classId
+                : item.allowedClasses[0]
+            ]
+          }
+        </p>
+      )}
       {item.worldRelicId && (
         <p className="world-relic-mark">
           Высшая редкость · история, имя и сила сохраняются при смене владельца
@@ -137,12 +150,16 @@ export function ItemCard({
                 type="button"
                 disabled={equipped || protectedItem}
                 title={
-                  protectedItem ? "Регалии короны нельзя продать." : undefined
+                  protectedItem
+                    ? "Уникальный трофей нельзя продать."
+                    : undefined
                 }
                 onClick={() => act((world) => world.sell(item.id))}
               >
                 {protectedItem
-                  ? "Регалия короны"
+                  ? champion
+                    ? "Трофей чемпиона"
+                    : "Регалия короны"
                   : `Продать · ${number.format(Math.max(1, Math.round(item.price * 0.45)))} ¤`}
               </button>
             )}

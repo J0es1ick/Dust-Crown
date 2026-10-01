@@ -275,6 +275,7 @@ describe("React save lifecycle", () => {
 
   test("offline progress appears once as a dismissible world overview notice", () => {
     const { store, storage, game } = setup(false);
+    game.save.hero.highestArena = 2;
     game.save.lastSimulatedAt = Date.now() - 20 * 60_000;
     store.repository.save(game.save);
     storage.setItem(MODE_KEY, "world");
@@ -351,7 +352,8 @@ describe("React save lifecycle", () => {
   });
 
   test("navigation waits for the matching rendered route and ignores stale completion", () => {
-    const { store } = setup();
+    const { store, game } = setup();
+    game.save.hero.highestArena = 2;
     store.navigate("history", "epoch-history-view");
     const first = store.getSnapshot().navigation!;
     expect(first).toMatchObject({ page: "history", anchor: "epoch-history-view" });

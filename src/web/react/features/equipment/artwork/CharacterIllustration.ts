@@ -838,6 +838,18 @@ function stableHash(value: string): number {
 }
 
 function profileFor(state: DollEquipmentState): VisualProfile {
+  if (state.setId?.startsWith("champion-")) {
+    const base: Record<string, string> = {
+      Knight: "bastion",
+      Archer: "wind",
+      Wizard: "astral",
+      Monk: "crane",
+      Gunsmith: "powder",
+      Swordsman: "dusk",
+    };
+    const profile = profiles[base[state.setId.slice(9)]];
+    if (profile) return { ...profile, collar: "ceremonial", outerwear: "cape" };
+  }
   if (state.templateId === "boss-widow-mantle")
     return {
       palette: 20,
@@ -899,9 +911,20 @@ function profileFor(state: DollEquipmentState): VisualProfile {
   };
 }
 
+function paletteFor(state: DollEquipmentState) {
+  return state.setId?.startsWith("champion-")
+    ? {
+        primary: "#8c3933",
+        secondary: "#c1a579",
+        dark: "#342423",
+        accent: "#e2b976",
+      }
+    : itemPalettes[profileFor(state).palette];
+}
+
 function itemStyle(state?: DollEquipmentState): string {
   if (!state) return "";
-  const palette = itemPalettes[profileFor(state).palette];
+  const palette = paletteFor(state);
   return [
     `--item-primary:${palette.primary}`,
     `--item-secondary:${palette.secondary}`,
@@ -1527,7 +1550,7 @@ export function createEquipmentIcon(
   icon.style.setProperty("--doll-secondary", palette.secondary);
   icon.style.setProperty("--doll-dark", palette.dark);
   if (state) {
-    const itemPalette = itemPalettes[profileFor(state).palette];
+    const itemPalette = paletteFor(state);
     icon.style.setProperty("--item-primary", itemPalette.primary);
     icon.style.setProperty("--item-secondary", itemPalette.secondary);
     icon.style.setProperty("--item-dark", itemPalette.dark);
