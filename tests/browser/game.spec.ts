@@ -441,6 +441,11 @@ test("battle preparation, pause and reload preserve the fight until the player c
   await noOverflow(page);
   await accessible(page);
   await expect(battle.getByText("ХОД 0", { exact: true })).toBeVisible();
+  const frame = page.locator(".react-battle-dialog .react-modal-paper");
+  const before = await frame.boundingBox();
+  const combatants = await battle.locator(".combatant").evaluateAll((elements) =>
+    elements.map((element) => element.getBoundingClientRect().height));
+  expect(combatants[0]).toBe(combatants[1]);
   await battle.getByRole("button", { name: "Настройки боя" }).click();
   const settings = page.getByRole("dialog", { name: "Настройки", exact: true });
   await settings
@@ -473,6 +478,10 @@ test("battle preparation, pause and reload preserve the fight until the player c
   await expect(battle.locator(".battle-reward-strip")).toBeVisible();
   await noOverflow(page);
   await accessible(page);
+  const after = await frame.boundingBox();
+  expect(after!.width).toBeCloseTo(before!.width, 0);
+  expect(after!.height).toBeCloseTo(before!.height, 0);
+  expect(after!.y).toBeCloseTo(before!.y, 0);
   await battle
     .getByRole("button", { name: "Продолжить игру", exact: true })
     .click();

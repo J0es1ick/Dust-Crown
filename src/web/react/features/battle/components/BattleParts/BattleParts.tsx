@@ -43,6 +43,8 @@ export function CombatantCard({
     <article
       className={`combatant ${side}-combatant ${motion}${lowHealth ? " low-health" : ""}`}
       id={`battle-${side}`}
+      tabIndex={0}
+      aria-label={side === "hero" ? "Состояние героя" : "Состояние противника"}
     >
       <span className="combatant-role">
         {side === "hero" ? "ВАШ ГЕРОЙ" : "ПРОТИВНИК"}

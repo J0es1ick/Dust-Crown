@@ -391,6 +391,7 @@ export function BattleDialog() {
         <CombatantCard side="hero" fighter={snapshot.hero} turn={turn} />
         <div
           className="battle-action"
+          tabIndex={0}
           role="status"
           aria-live="polite"
           aria-atomic="true"

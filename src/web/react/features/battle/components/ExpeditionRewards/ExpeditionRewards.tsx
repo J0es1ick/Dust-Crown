@@ -29,7 +29,7 @@ export function ExpeditionRewards({
   return (
     <Modal
       id="dungeon-layer"
-      className="react-dungeon-dialog"
+      className="react-dungeon-dialog react-battle-rewards"
       dismissible={false}
       eyebrow={
         result.completed ? "ЭКСПЕДИЦИЯ ЗАВЕРШЕНА" : "ВОЗВРАЩЕНИЕ ИЗ ПОХОДА"
